@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { PanelRight } from "lucide-react"
+import { PanelRight, ArrowLeft } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
@@ -39,6 +39,10 @@ export default function Page() {
     if (hasPlan) setPanelOpen(true)
   }, [hasPlan])
 
+  function handleBack() {
+    setActiveAgent(null)
+  }
+
   function handleSend(text: string) {
     if (!selectedAgent) return
     sendMessage(text, selectedAgent.id)
@@ -65,6 +69,17 @@ export default function Page() {
         <main className="flex min-w-0 flex-1 flex-col">
           {/* header */}
           <header className="relative flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
+            {selectedAgent && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 text-muted-foreground"
+                onClick={handleBack}
+                aria-label="返回选择智能体"
+              >
+                <ArrowLeft className="size-5" />
+              </Button>
+            )}
             <h2 className="mx-auto truncate text-sm font-semibold text-foreground">
               {activeConversation?.title ?? "新对话"}
             </h2>
@@ -100,19 +115,21 @@ export default function Page() {
               )}
             </div>
 
-            {/* composer */}
-            <div className="shrink-0 px-4 pb-4">
-              <div className="mx-auto w-full max-w-3xl">
-                <ChatComposer
-                  selectedAgent={selectedAgent}
-                  onSelectAgent={handleSelectAgent}
-                  onSend={handleSend}
-                  isStreaming={isStreaming}
-                  onStop={stop}
-                />
-                <p className="mt-2 text-center text-xs text-muted-foreground">内容由 AI 生成，请仔细甄别</p>
+            {/* composer - only show when agent is selected */}
+            {selectedAgent && (
+              <div className="shrink-0 px-4 pb-4">
+                <div className="mx-auto w-full max-w-3xl">
+                  <ChatComposer
+                    selectedAgent={selectedAgent}
+                    onSelectAgent={handleSelectAgent}
+                    onSend={handleSend}
+                    isStreaming={isStreaming}
+                    onStop={stop}
+                  />
+                  <p className="mt-2 text-center text-xs text-muted-foreground">内容由 AI 生成，请仔细甄别</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </main>
 

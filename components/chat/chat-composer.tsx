@@ -1,15 +1,9 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ArrowUp, Mic, Paperclip, ChevronDown, AtSign, Slash, Bot, Square } from "lucide-react"
+import { ArrowUp, Mic, Paperclip, AtSign, Slash, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { AGENTS } from "@/lib/mock-data"
 import type { Agent, AgentId } from "@/lib/types"
 
@@ -151,37 +145,6 @@ export function ChatComposer({
       />
 
       <div className="flex items-center gap-2 px-3 pb-3 pt-1">
-        {/* agent picker */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5">
-              {selectedAgent ? (
-                <>
-                  <img src={selectedAgent.avatar || "/placeholder.svg"} alt="" className="size-4 rounded-full object-cover" />
-                  {selectedAgent.name}
-                </>
-              ) : (
-                <>
-                  <Bot className="size-4" />
-                  请选择智能体
-                </>
-              )}
-              <ChevronDown className="size-3.5 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64">
-            {AGENTS.map((a) => (
-              <DropdownMenuItem key={a.id} onClick={() => onSelectAgent(a.id)} className="gap-2">
-                <img src={a.avatar || "/placeholder.svg"} alt="" className="size-6 rounded-full object-cover" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{a.name}</span>
-                  <span className="text-xs text-muted-foreground">{a.tagline}</span>
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         <div className="ml-auto flex items-center gap-1">
           <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label="语音输入">
             <Mic className="size-5" />

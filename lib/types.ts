@@ -1,4 +1,4 @@
-export type AgentId = "general" | "data" | "research" | "coder"
+export type AgentId = string
 
 export interface Skill {
   id: string
@@ -15,6 +15,8 @@ export interface Agent {
   greeting: string
   sampleQuestions: string[]
   skills: Skill[]
+  /** Usage count for sorting "frequently used" agents */
+  usageCount?: number
 }
 
 export interface TokenUsage {
