@@ -56,23 +56,20 @@ export default function Page() {
       }
     }
 
-    // Mock data for demo purposes when no real usage exists
-    if (totalPrompt === 0 && totalCompletion === 0 && messages.length > 0) {
+    // If we have real usage data, return it
+    if (totalPrompt > 0 || totalCompletion > 0) {
       return {
-        prompt: 2450,
-        completion: 1230,
-        total: 3680,
+        prompt: totalPrompt,
+        completion: totalCompletion,
+        total: totalPrompt + totalCompletion,
       }
     }
 
-    if (totalPrompt === 0 && totalCompletion === 0) {
-      return null
-    }
-
+    // Mock data for demo purposes - always show when agent is selected
     return {
-      prompt: totalPrompt,
-      completion: totalCompletion,
-      total: totalPrompt + totalCompletion,
+      prompt: 2450,
+      completion: 1230,
+      total: 3680,
     }
   }, [activeConversation])
 
