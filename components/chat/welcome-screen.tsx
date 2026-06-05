@@ -240,7 +240,8 @@ export function WelcomeScreen({
 
   // Agent selected — show greeting + sample questions
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-6 px-4 py-10">
+    <div className="flex min-h-full items-center justify-center px-4 py-10">
+      <div className="flex w-full max-w-2xl flex-col items-center gap-6">
       <img
         src={agent.avatar || "/placeholder.svg"}
         alt=""
@@ -271,6 +272,7 @@ export function WelcomeScreen({
             </button>
           ))}
         </div>
+      </div>
       </div>
     </div>
   )
