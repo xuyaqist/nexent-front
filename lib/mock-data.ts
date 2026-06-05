@@ -360,7 +360,7 @@ export const AGENTS: Agent[] = [
     skills: [
       { id: "wellness", name: "健康科普", description: "健康知识普及" },
       { id: "fitness", name: "健身指导", description: "运动计划制定" },
-      { id: "nutrition", name: "营养建议", description: "饮食营养指导" },
+      { id: "nutrition", name: "营养���议", description: "饮食营养指导" },
     ],
     updatedAt: now - day * 17,
   },
@@ -410,7 +410,6 @@ export function getAgent(id: string | null | undefined): Agent | undefined {
   return AGENTS.find((a) => a.id === id)
 }
 
-const now = Date.now()
 const hour = 1000 * 60 * 60
 
 export const INITIAL_CONVERSATIONS: Conversation[] = [
