@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { PanelRight, ArrowLeft } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { PanelRight, ArrowLeft, Lightbulb, Play } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
@@ -9,9 +9,12 @@ import { WelcomeScreen } from "@/components/chat/welcome-screen"
 import { ChatThread } from "@/components/chat/chat-thread"
 import { ChatComposer } from "@/components/chat/chat-composer"
 import { TaskPanel } from "@/components/chat/task-panel"
+import { TokenUsageWidget } from "@/components/chat/token-usage-widget"
 import { useChat } from "@/hooks/use-chat"
 import { getAgent } from "@/lib/mock-data"
 import type { AgentId } from "@/lib/types"
+
+type ChatMode = "planning" | "execution"
 
 export default function Page() {
   const {
@@ -29,6 +32,7 @@ export default function Page() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true)
+  const [chatMode, setChatMode] = useState<ChatMode>("planning")
 
   const selectedAgent = getAgent(activeConversation?.agentId)
   const hasMessages = (activeConversation?.messages.length ?? 0) > 0
@@ -38,6 +42,40 @@ export default function Page() {
   const lastUsedAgentId = conversations
     .filter((c) => c.messages.length > 0 && c.agentId)
     .sort((a, b) => b.updatedAt - a.updatedAt)[0]?.agentId ?? null
+
+  // Calculate cumulative token usage from all assistant messages
+  const tokenUsage = useMemo(() => {
+    if (!activeConversation) return null
+    const messages = activeConversation.messages
+    let totalPrompt = 0
+    let totalCompletion = 0
+
+    for (const msg of messages) {
+      if (msg.role === "assistant" && msg.usage) {
+        totalPrompt += msg.usage.prompt
+        totalCompletion += msg.usage.completion
+      }
+    }
+
+    // Mock data for demo purposes when no real usage exists
+    if (totalPrompt === 0 && totalCompletion === 0 && messages.length > 0) {
+      return {
+        prompt: 2450,
+        completion: 1230,
+        total: 3680,
+      }
+    }
+
+    if (totalPrompt === 0 && totalCompletion === 0) {
+      return null
+    }
+
+    return {
+      prompt: totalPrompt,
+      completion: totalCompletion,
+      total: totalPrompt + totalCompletion,
+    }
+  }, [activeConversation])
 
   // auto-open the task panel whenever a plan appears
   useEffect(() => {
@@ -57,7 +95,8 @@ export default function Page() {
     setActiveAgent(id)
   }
 
-  const showPanel = hasPlan && panelOpen
+  const showPanel = chatMode === "planning" && hasPlan && panelOpen
+  const showFloatingToken = chatMode === "execution" && hasMessages && tokenUsage
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -85,10 +124,37 @@ export default function Page() {
                 <ArrowLeft className="size-5" />
               </Button>
             )}
-            <h2 className="mx-auto truncate text-sm font-semibold text-foreground">
-              {activeConversation?.title ?? "新对话"}
-            </h2>
-            {hasPlan && !panelOpen && (
+
+            {/* Mode switcher - centered with title */}
+            <div className="mx-auto flex items-center gap-3">
+              <h2 className="truncate text-sm font-semibold text-foreground">
+                {activeConversation?.title ?? "新对话"}
+              </h2>
+              {selectedAgent && (
+                <div className="flex items-center rounded-lg border border-border bg-muted/50 p-0.5">
+                  <Button
+                    variant={chatMode === "planning" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 gap-1.5 rounded-md px-2.5 text-xs"
+                    onClick={() => setChatMode("planning")}
+                  >
+                    <Lightbulb className="size-3.5" />
+                    规划模式
+                  </Button>
+                  <Button
+                    variant={chatMode === "execution" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 gap-1.5 rounded-md px-2.5 text-xs"
+                    onClick={() => setChatMode("execution")}
+                  >
+                    <Play className="size-3.5" />
+                    执行模式
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {chatMode === "planning" && hasPlan && !panelOpen && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -141,6 +207,13 @@ export default function Page() {
 
         {showPanel && activeConversation && (
           <TaskPanel conversation={activeConversation} onClose={() => setPanelOpen(false)} />
+        )}
+
+        {/* Floating Token Widget for execution mode */}
+        {showFloatingToken && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <TokenUsageWidget usage={tokenUsage} />
+          </div>
         )}
       </div>
     </TooltipProvider>
