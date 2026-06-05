@@ -149,7 +149,7 @@ export function ChatComposer({
 
             {/* Expanded details popover */}
             {tokenExpanded && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-border bg-popover p-3 shadow-lg">
+              <div className="absolute bottom-full right-0 z-50 mb-1 w-64 rounded-lg border border-border bg-popover p-3 shadow-lg">
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-xs font-medium text-foreground">Token 使用详情</span>
                   <button
