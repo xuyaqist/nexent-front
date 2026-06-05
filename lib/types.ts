@@ -15,8 +15,8 @@ export interface Agent {
   greeting: string
   sampleQuestions: string[]
   skills: Skill[]
-  /** Usage count for sorting "frequently used" agents */
-  usageCount?: number
+  /** Timestamp when the agent was last updated/edited */
+  updatedAt?: number
 }
 
 export interface TokenUsage {

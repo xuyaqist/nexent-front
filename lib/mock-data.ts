@@ -1,4 +1,5 @@
-import type { Agent, Conversation } from "./types"
+const now = Date.now()
+const day = 1000 * 60 * 60 * 24
 
 export const AGENTS: Agent[] = [
   {
@@ -21,7 +22,7 @@ export const AGENTS: Agent[] = [
       { id: "doc-summary", name: "文档总结", description: "提炼长文档核心要点" },
       { id: "image-understand", name: "图片解析", description: "理解图片中的内容" },
     ],
-    usageCount: 156,
+    updatedAt: now - day * 1,
   },
   {
     id: "data",
@@ -41,7 +42,7 @@ export const AGENTS: Agent[] = [
       { id: "chart", name: "图表生成", description: "把数据转成可视化图表" },
       { id: "forecast", name: "趋势预测", description: "基于历史数据做预测" },
     ],
-    usageCount: 89,
+    updatedAt: now - day * 3,
   },
   {
     id: "research",
@@ -61,7 +62,7 @@ export const AGENTS: Agent[] = [
       { id: "cite", name: "引用溯源", description: "为结论标注来源" },
       { id: "outline", name: "大纲生成", description: "生成结构化研究大纲" },
     ],
-    usageCount: 67,
+    updatedAt: now - day * 5,
   },
   {
     id: "coder",
@@ -81,7 +82,7 @@ export const AGENTS: Agent[] = [
       { id: "review", name: "代码审查", description: "审查代码质量与隐患" },
       { id: "run", name: "运行沙箱", description: "在沙箱中执行代码" },
     ],
-    usageCount: 134,
+    updatedAt: now - day * 2,
   },
   {
     id: "translator",
@@ -101,7 +102,7 @@ export const AGENTS: Agent[] = [
       { id: "polish", name: "文本润色", description: "优化表达与语法" },
       { id: "localize", name: "本地化", description: "文化适配翻译" },
     ],
-    usageCount: 45,
+    updatedAt: now - day * 10,
   },
   {
     id: "writer",
@@ -121,7 +122,7 @@ export const AGENTS: Agent[] = [
       { id: "storytelling", name: "故事叙述", description: "打造品牌故事" },
       { id: "seo", name: "SEO 优化", description: "搜索引擎优化写作" },
     ],
-    usageCount: 78,
+    updatedAt: now - day * 7,
   },
   {
     id: "legal",
@@ -141,7 +142,7 @@ export const AGENTS: Agent[] = [
       { id: "legal-explain", name: "条款解读", description: "解释法律术语" },
       { id: "compliance", name: "合规建议", description: "提供合规指导" },
     ],
-    usageCount: 23,
+    updatedAt: now - day * 15,
   },
   {
     id: "finance",
@@ -161,7 +162,7 @@ export const AGENTS: Agent[] = [
       { id: "investment", name: "投资评估", description: "评估投资机会" },
       { id: "planning", name: "财务规划", description: "制定财务计划" },
     ],
-    usageCount: 56,
+    updatedAt: now - day * 8,
   },
   {
     id: "hr",
@@ -181,7 +182,7 @@ export const AGENTS: Agent[] = [
       { id: "training", name: "培训设计", description: "制定培训方案" },
       { id: "culture", name: "文化建设", description: "企业文化咨询" },
     ],
-    usageCount: 34,
+    updatedAt: now - day * 12,
   },
   {
     id: "marketing",
@@ -201,7 +202,7 @@ export const AGENTS: Agent[] = [
       { id: "campaign", name: "活动策划", description: "设计营销活动" },
       { id: "growth", name: "增长策略", description: "用户增长方案" },
     ],
-    usageCount: 62,
+    updatedAt: now - day * 6,
   },
   {
     id: "product",
@@ -221,7 +222,7 @@ export const AGENTS: Agent[] = [
       { id: "user-research", name: "用户研究", description: "分析用户需求" },
       { id: "roadmap", name: "产品规划", description: "制定产品路线" },
     ],
-    usageCount: 91,
+    updatedAt: now - day * 4,
   },
   {
     id: "design",
@@ -241,7 +242,7 @@ export const AGENTS: Agent[] = [
       { id: "ui-suggest", name: "界面建议", description: "优化界面设计" },
       { id: "design-system", name: "设计规范", description: "建立设计体系" },
     ],
-    usageCount: 48,
+    updatedAt: now - day * 9,
   },
   {
     id: "devops",
@@ -261,7 +262,7 @@ export const AGENTS: Agent[] = [
       { id: "cicd", name: "CI/CD", description: "持续集成部署" },
       { id: "monitoring", name: "监控告警", description: "系统监控配置" },
     ],
-    usageCount: 37,
+    updatedAt: now - day * 11,
   },
   {
     id: "security",
@@ -281,7 +282,7 @@ export const AGENTS: Agent[] = [
       { id: "pentest", name: "渗透测试", description: "模拟攻击测试" },
       { id: "hardening", name: "安全加固", description: "系统安全加固" },
     ],
-    usageCount: 19,
+    updatedAt: now - day * 20,
   },
   {
     id: "database",
@@ -301,7 +302,7 @@ export const AGENTS: Agent[] = [
       { id: "optimize", name: "查询优化", description: "SQL 性能优化" },
       { id: "migrate", name: "数据迁移", description: "数据库迁移" },
     ],
-    usageCount: 42,
+    updatedAt: now - day * 13,
   },
   {
     id: "customer-service",
@@ -321,7 +322,7 @@ export const AGENTS: Agent[] = [
       { id: "complaint", name: "投诉处理", description: "处理客户投诉" },
       { id: "satisfaction", name: "满意度", description: "提升服务质量" },
     ],
-    usageCount: 28,
+    updatedAt: now - day * 14,
   },
   {
     id: "education",
@@ -341,7 +342,7 @@ export const AGENTS: Agent[] = [
       { id: "problem-solve", name: "解题指导", description: "分析解题思路" },
       { id: "study-plan", name: "学习规划", description: "制定学习计划" },
     ],
-    usageCount: 53,
+    updatedAt: now - day * 16,
   },
   {
     id: "health",
@@ -361,7 +362,7 @@ export const AGENTS: Agent[] = [
       { id: "fitness", name: "健身指导", description: "运动计划制定" },
       { id: "nutrition", name: "营养建议", description: "饮食营养指导" },
     ],
-    usageCount: 31,
+    updatedAt: now - day * 17,
   },
   {
     id: "travel",
@@ -381,7 +382,7 @@ export const AGENTS: Agent[] = [
       { id: "recommend", name: "景点推荐", description: "推荐热门景点" },
       { id: "budget", name: "预算评估", description: "旅行费用估算" },
     ],
-    usageCount: 25,
+    updatedAt: now - day * 18,
   },
   {
     id: "assistant",
@@ -401,7 +402,7 @@ export const AGENTS: Agent[] = [
       { id: "todo", name: "待办管理", description: "管理待办事项" },
       { id: "reminder", name: "智能提醒", description: "设置事项提醒" },
     ],
-    usageCount: 72,
+    updatedAt: now - day * 19,
   },
 ]
 

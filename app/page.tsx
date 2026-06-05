@@ -34,6 +34,11 @@ export default function Page() {
   const hasMessages = (activeConversation?.messages.length ?? 0) > 0
   const hasPlan = !!activeConversation?.plan && (activeConversation.plan.steps.length ?? 0) > 0
 
+  // Find the last used agent from the most recent conversation with messages
+  const lastUsedAgentId = conversations
+    .filter((c) => c.messages.length > 0 && c.agentId)
+    .sort((a, b) => b.updatedAt - a.updatedAt)[0]?.agentId ?? null
+
   // auto-open the task panel whenever a plan appears
   useEffect(() => {
     if (hasPlan) setPanelOpen(true)
@@ -111,6 +116,7 @@ export default function Page() {
                   agent={selectedAgent}
                   onSelectAgent={handleSelectAgent}
                   onPickQuestion={handleSend}
+                  lastUsedAgentId={lastUsedAgentId}
                 />
               )}
             </div>

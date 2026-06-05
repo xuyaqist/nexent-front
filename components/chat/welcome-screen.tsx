@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Sparkles, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Sparkles, Search, ChevronLeft, ChevronRight, History } from "lucide-react"
 import { AGENTS } from "@/lib/mock-data"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import type { Agent, AgentId } from "@/lib/types"
 
 const ITEMS_PER_PAGE = 8
@@ -14,18 +13,31 @@ export function WelcomeScreen({
   agent,
   onSelectAgent,
   onPickQuestion,
+  lastUsedAgentId,
 }: {
   agent: Agent | undefined
   onSelectAgent: (id: AgentId) => void
   onPickQuestion: (q: string) => void
+  /** The ID of the last used agent (from the most recent conversation) */
+  lastUsedAgentId?: AgentId | null
 }) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState<"all" | "frequent">("all")
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Filter and sort agents
+  // Find the last used agent
+  const lastUsedAgent = useMemo(() => {
+    if (!lastUsedAgentId) return null
+    return AGENTS.find((a) => a.id === lastUsedAgentId) ?? null
+  }, [lastUsedAgentId])
+
+  // Filter and sort agents by updatedAt (most recent first)
   const filteredAgents = useMemo(() => {
     let result = [...AGENTS]
+
+    // Exclude the last used agent from the main list (it will be shown separately)
+    if (lastUsedAgentId) {
+      result = result.filter((a) => a.id !== lastUsedAgentId)
+    }
 
     // Search filter
     if (searchQuery.trim()) {
@@ -39,15 +51,11 @@ export function WelcomeScreen({
       )
     }
 
-    // Sort by usage count for "frequent" tab
-    if (activeTab === "frequent") {
-      result = result
-        .filter((a) => (a.usageCount ?? 0) > 0)
-        .sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0))
-    }
+    // Sort by updatedAt (most recent first)
+    result.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
 
     return result
-  }, [searchQuery, activeTab])
+  }, [searchQuery, lastUsedAgentId])
 
   // Pagination
   const totalPages = Math.ceil(filteredAgents.length / ITEMS_PER_PAGE)
@@ -62,11 +70,6 @@ export function WelcomeScreen({
     setCurrentPage(1)
   }
 
-  const handleTabChange = (tab: "all" | "frequent") => {
-    setActiveTab(tab)
-    setCurrentPage(1)
-  }
-
   // No agent selected yet — show the picker grid
   if (!agent) {
     return (
@@ -76,13 +79,13 @@ export function WelcomeScreen({
             选择一个智能体开始对话
           </h1>
           <p className="mt-2 text-pretty text-sm text-muted-foreground">
-            每个智能体擅长不同的任务，也可以在输入框中用 @ 随时切换。
+            每个智能体擅长不同的任务，选择合适的智能体可以获得更好的回答。
           </p>
         </div>
 
-        {/* Search and Tabs */}
-        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:max-w-xs">
+        {/* Search */}
+        <div className="w-full sm:max-w-md">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchQuery}
@@ -91,65 +94,72 @@ export function WelcomeScreen({
               className="pl-9"
             />
           </div>
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+        </div>
+
+        {/* Last Used Agent Card */}
+        {lastUsedAgent && !searchQuery && (
+          <div className="w-full">
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <History className="size-3.5" />
+              上次使用
+            </div>
             <button
               type="button"
-              onClick={() => handleTabChange("all")}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                activeTab === "all"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              onClick={() => onSelectAgent(lastUsedAgent.id)}
+              className="flex w-full items-start gap-3 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/10"
             >
-              全部
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange("frequent")}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                activeTab === "frequent"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              常用
+              <img
+                src={lastUsedAgent.avatar || "/placeholder.svg"}
+                alt=""
+                className="size-11 shrink-0 rounded-full object-cover ring-2 ring-primary/20"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate font-semibold text-foreground">{lastUsedAgent.name}</p>
+                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    继续对话
+                  </span>
+                </div>
+                <p className="text-xs text-primary">{lastUsedAgent.tagline}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {lastUsedAgent.description}
+                </p>
+              </div>
             </button>
           </div>
-        </div>
+        )}
 
         {/* Agent Grid */}
         {paginatedAgents.length > 0 ? (
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-            {paginatedAgents.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => onSelectAgent(a.id)}
-                className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-accent/50"
-              >
-                <img
-                  src={a.avatar || "/placeholder.svg"}
-                  alt=""
-                  className="size-11 shrink-0 rounded-full object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+          <div className="w-full">
+            {lastUsedAgent && !searchQuery && (
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                全部智能体
+              </div>
+            )}
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+              {paginatedAgents.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onSelectAgent(a.id)}
+                  className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-accent/50"
+                >
+                  <img
+                    src={a.avatar || "/placeholder.svg"}
+                    alt=""
+                    className="size-11 shrink-0 rounded-full object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-foreground">{a.name}</p>
-                    {activeTab === "frequent" && a.usageCount && (
-                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                        {a.usageCount} 次
-                      </span>
-                    )}
+                    <p className="text-xs text-primary">{a.tagline}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {a.description}
+                    </p>
                   </div>
-                  <p className="text-xs text-primary">{a.tagline}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {a.description}
-                  </p>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -219,7 +229,7 @@ export function WelcomeScreen({
 
         {/* Total count */}
         <p className="text-xs text-muted-foreground">
-          共 {filteredAgents.length} 个智能体
+          共 {filteredAgents.length + (lastUsedAgent && !searchQuery ? 1 : 0)} 个智能体
           {totalPages > 1 && `，第 ${currentPage}/${totalPages} 页`}
         </p>
       </div>
