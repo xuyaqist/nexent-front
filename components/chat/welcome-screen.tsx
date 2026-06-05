@@ -73,7 +73,8 @@ export function WelcomeScreen({
   // No agent selected yet — show the picker grid
   if (!agent) {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 py-8">
+      <div className="flex min-h-full items-center justify-center px-4 py-8">
+        <div className="flex w-full max-w-3xl flex-col items-center gap-6">
         <div className="text-center">
           <h1 className="text-balance text-2xl font-bold text-foreground md:text-3xl">
             选择一个智能体开始对话
@@ -101,7 +102,7 @@ export function WelcomeScreen({
           <div className="w-full">
             <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <History className="size-3.5" />
-              上次使用
+              上次使用的智能体
             </div>
             <button
               type="button"
@@ -232,6 +233,7 @@ export function WelcomeScreen({
           共 {filteredAgents.length + (lastUsedAgent && !searchQuery ? 1 : 0)} 个智能体
           {totalPages > 1 && `，第 ${currentPage}/${totalPages} 页`}
         </p>
+        </div>
       </div>
     )
   }
