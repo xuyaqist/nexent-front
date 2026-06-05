@@ -1,22 +1,28 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Globe, Plus, RefreshCw, Settings2, Lightbulb, Check } from "lucide-react"
-import { TOOL_GROUPS, TOOL_SOURCES } from "@/lib/types"
+import { ChevronRight, Globe, Plus, RefreshCw, Settings2, Lightbulb, Check, Zap } from "lucide-react"
+import { TOOL_GROUPS, TOOL_SOURCES, SKILL_GROUPS } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface CapabilityPanelProps {
   selectedTools: string[]
+  selectedSkills: string[]
   onToggleTool: (tool: string) => void
+  onToggleSkill: (skill: string) => void
 }
 
-export function AgentCapabilityPanel({ selectedTools, onToggleTool }: CapabilityPanelProps) {
+export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTool, onToggleSkill }: CapabilityPanelProps) {
   const [activeTab, setActiveTab] = useState<"tools" | "skills">("tools")
   const [activeSource, setActiveSource] = useState("本地工具")
   const [openGroups, setOpenGroups] = useState<string[]>(["database"])
+  const [openSkillGroups, setOpenSkillGroups] = useState<string[]>(["数据处理"])
 
   const toggleGroup = (cat: string) =>
     setOpenGroups((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]))
+
+  const toggleSkillGroup = (cat: string) =>
+    setOpenSkillGroups((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]))
 
   return (
     <section className="rounded-xl border border-border bg-card p-6">
@@ -58,11 +64,12 @@ export function AgentCapabilityPanel({ selectedTools, onToggleTool }: Capability
         <button
           onClick={() => setActiveTab("skills")}
           className={cn(
-            "flex items-center justify-center rounded-md py-2 text-sm font-medium transition-colors",
+            "flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors",
             activeTab === "skills" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
           )}
         >
           选择技能
+          <Zap className="size-3.5 text-primary" />
         </button>
       </div>
 
@@ -77,66 +84,115 @@ export function AgentCapabilityPanel({ selectedTools, onToggleTool }: Capability
         </button>
       </div>
 
-      {/* 工具来源 + 工具列表 */}
+      {/* 工具来源 + 工具/技能列表 */}
       <div className="flex min-h-[340px] gap-3 border-t border-border pt-4">
-        <nav className="flex w-28 shrink-0 flex-col gap-1">
-          {TOOL_SOURCES.map((src) => (
-            <button
-              key={src}
-              onClick={() => setActiveSource(src)}
-              className={cn(
-                "truncate border-l-2 py-2 pl-3 text-left text-sm transition-colors",
-                activeSource === src
-                  ? "border-primary font-medium text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {src}
-            </button>
-          ))}
-        </nav>
-
-        <div className="flex-1 space-y-2">
-          {TOOL_GROUPS.map((group) => {
-            const open = openGroups.includes(group.category)
-            return (
-              <div key={group.category} className="overflow-hidden rounded-lg border border-border">
+        {activeTab === "tools" ? (
+          <>
+            <nav className="flex w-28 shrink-0 flex-col gap-1">
+              {TOOL_SOURCES.map((src) => (
                 <button
-                  onClick={() => toggleGroup(group.category)}
-                  className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
+                  key={src}
+                  onClick={() => setActiveSource(src)}
+                  className={cn(
+                    "truncate border-l-2 py-2 pl-3 text-left text-sm transition-colors",
+                    activeSource === src
+                      ? "border-primary font-medium text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
                 >
-                  <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
-                  {group.category}
+                  {src}
                 </button>
-                {open && (
-                  <ul className="divide-y divide-border">
-                    {group.tools.map((tool) => {
-                      const selected = selectedTools.includes(tool)
-                      return (
-                        <li key={tool}>
-                          <button
-                            onClick={() => onToggleTool(tool)}
-                            className="flex w-full items-center justify-between px-3 py-2 pl-9 text-left text-sm text-muted-foreground hover:bg-accent/50"
-                          >
-                            {tool}
-                            <span
-                              className={cn(
-                                "flex size-4 items-center justify-center rounded border",
-                                selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
-                              )}
+              ))}
+            </nav>
+
+            <div className="flex-1 space-y-2">
+              {TOOL_GROUPS.map((group) => {
+                const open = openGroups.includes(group.category)
+                return (
+                  <div key={group.category} className="overflow-hidden rounded-lg border border-border">
+                    <button
+                      onClick={() => toggleGroup(group.category)}
+                      className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
+                    >
+                      <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+                      {group.category}
+                    </button>
+                    {open && (
+                      <ul className="divide-y divide-border">
+                        {group.tools.map((tool) => {
+                          const selected = selectedTools.includes(tool)
+                          return (
+                            <li key={tool}>
+                              <button
+                                onClick={() => onToggleTool(tool)}
+                                className="flex w-full items-center justify-between px-3 py-2 pl-9 text-left text-sm text-muted-foreground hover:bg-accent/50"
+                              >
+                                {tool}
+                                <span
+                                  className={cn(
+                                    "flex size-4 items-center justify-center rounded border",
+                                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                                  )}
+                                >
+                                  {selected && <Check className="size-3" />}
+                                </span>
+                              </button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 space-y-2">
+            {SKILL_GROUPS.map((group) => {
+              const open = openSkillGroups.includes(group.category)
+              return (
+                <div key={group.category} className="overflow-hidden rounded-lg border border-border">
+                  <button
+                    onClick={() => toggleSkillGroup(group.category)}
+                    className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
+                  >
+                    <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+                    {group.category}
+                  </button>
+                  {open && (
+                    <ul className="divide-y divide-border">
+                      {group.skills.map((skill) => {
+                        const selected = selectedSkills.includes(skill.name)
+                        return (
+                          <li key={skill.name}>
+                            <button
+                              onClick={() => onToggleSkill(skill.name)}
+                              className="flex w-full items-center justify-between px-3 py-2 pl-9 text-left text-sm hover:bg-accent/50"
                             >
-                              {selected && <Check className="size-3" />}
-                            </span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                              <div>
+                                <span className="text-foreground">{skill.name}</span>
+                                <p className="text-xs text-muted-foreground">{skill.description}</p>
+                              </div>
+                              <span
+                                className={cn(
+                                  "flex size-4 shrink-0 items-center justify-center rounded border",
+                                  selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                                )}
+                              >
+                                {selected && <Check className="size-3" />}
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </section>
   )

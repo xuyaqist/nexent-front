@@ -37,6 +37,12 @@ export function AgentEditor({ agent, onBack, onSave, onPublish }: AgentEditorPro
       tools: prev.tools.includes(tool) ? prev.tools.filter((t) => t !== tool) : [...prev.tools, tool],
     }))
 
+  const toggleSkill = (skill: string) =>
+    setDraft((prev) => ({
+      ...prev,
+      skills: prev.skills.includes(skill) ? prev.skills.filter((s) => s !== skill) : [...prev.skills, skill],
+    }))
+
   return (
     <div className="min-h-screen bg-background">
       {/* 顶部栏 */}
@@ -66,7 +72,12 @@ export function AgentEditor({ agent, onBack, onSave, onPublish }: AgentEditorPro
       {/* 主体 */}
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-2">
         {/* 左：配置能力 */}
-        <AgentCapabilityPanel selectedTools={draft.tools} onToggleTool={toggleTool} />
+        <AgentCapabilityPanel 
+          selectedTools={draft.tools} 
+          selectedSkills={draft.skills}
+          onToggleTool={toggleTool} 
+          onToggleSkill={toggleSkill}
+        />
 
         {/* 右：业务逻辑 */}
         <section className="rounded-xl border border-border bg-card p-6">
