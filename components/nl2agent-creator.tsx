@@ -182,7 +182,7 @@ ${suggestedSkills.map(s => `- ${s}`).join('\n')}
 - 保持文档风格统一、格式规范
 - 重要内容进行高亮标注
 - 生成后提供预览和修改建议`
-    examplesDesc = `**用户：** 帮我生成一份项目周报
+    examplesDesc = `**用户：** ���我生成一份项目周报
 **助手：** 好的，我来帮你生成周报。请提供以下信息：
 1. 本周主要完成的工作内容
 2. 遇到的问题和解决方案
@@ -379,9 +379,9 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
   }
   
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
       {/* 顶部栏 */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
+      <header className="shrink-0 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={onBack} aria-label="返回">
@@ -398,10 +398,11 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
         </div>
       </header>
       
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-6">
-        <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-5">
-          {/* 对话区域 */}
-          <div className="flex flex-col lg:col-span-3">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 overflow-hidden px-6 py-6">
+        <div className="grid flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-5">
+          {/* 对话区域 - 左侧 */}
+          <div className="flex flex-col overflow-hidden lg:col-span-3">
+            {/* 对话消息 - 可滚动 */}
             <div className="flex-1 overflow-y-auto pr-4">
               <div className="space-y-4 pb-4">
                 {messages.map((message) => (
@@ -468,8 +469,8 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
               </div>
             </div>
             
-            {/* 输入区域 */}
-            <div className="mt-4 rounded-xl border border-border bg-card p-3">
+            {/* 输入区域 - 固定在底部 */}
+            <div className="mt-4 shrink-0 rounded-xl border border-border bg-card p-3">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -488,10 +489,10 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
             </div>
           </div>
           
-          {/* 预览面板 */}
-          <div className="flex flex-col gap-4 lg:col-span-2">
-            {/* 工具和技能预览 */}
-            <div className="rounded-xl border border-border bg-card p-4">
+          {/* 预览面板 - 右侧固定 */}
+          <div className="flex flex-col gap-4 overflow-hidden lg:col-span-2">
+            {/* 工具和技能预览 - 固定高度 */}
+            <div className="shrink-0 rounded-xl border border-border bg-card p-4">
               <Tabs defaultValue="tools" className="w-full">
                 <TabsList className="mb-3 grid w-full grid-cols-2">
                   <TabsTrigger value="tools" className="gap-1.5 text-xs">
@@ -503,7 +504,7 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
                     推荐技能
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value="tools" className="mt-0">
+                <TabsContent value="tools" className="mt-0 max-h-24 overflow-y-auto">
                   {currentTools.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {currentTools.map((tool) => (
@@ -516,7 +517,7 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
                     <p className="text-sm text-muted-foreground">工具将在对话中自动推荐</p>
                   )}
                 </TabsContent>
-                <TabsContent value="skills" className="mt-0">
+                <TabsContent value="skills" className="mt-0 max-h-24 overflow-y-auto">
                   {currentSkills.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {currentSkills.map((skill) => (
@@ -532,9 +533,9 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
               </Tabs>
             </div>
             
-            {/* 提示词预览 */}
-            <div className="flex flex-1 flex-col rounded-xl border border-border bg-card p-4">
-              <div className="mb-3 flex items-center justify-between">
+            {/* 提示词预览 - 固定高度，内部可滚动 */}
+            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-card p-4">
+              <div className="mb-3 flex shrink-0 items-center justify-between">
                 <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Sparkles className="size-4" />
                   生成的提示词
@@ -546,7 +547,7 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
                 )}
               </div>
               {currentPrompt ? (
-                <div className="flex-1 space-y-4 overflow-y-auto">
+                <div className="flex-1 space-y-4 overflow-y-auto pr-1">
                   {renderPromptSection("角色", "role", currentPrompt.role, "定义智能体的角色和身份...")}
                   {renderPromptSection("使用要求", "requirements", currentPrompt.requirements, "规定智能体的行为规范...")}
                   {renderPromptSection("示例", "examples", currentPrompt.examples, "提供典型的交互示例...")}
@@ -561,9 +562,9 @@ export function NL2AgentCreator({ onBack, onComplete }: NL2AgentCreatorProps) {
               )}
             </div>
             
-            {/* 创建按钮 */}
+            {/* 创建按钮 - 固定在底部 */}
             {currentPrompt && (
-              <Button onClick={handleConfirmCreate} className="gap-2">
+              <Button onClick={handleConfirmCreate} className="shrink-0 gap-2">
                 <Check className="size-4" />
                 确认创建智能体
                 <ChevronRight className="size-4" />
