@@ -21,6 +21,8 @@ interface MentionState {
   tokenStart: number
 }
 
+const MAX_CONTEXT_TOKENS = 128000 // Simulated max context window
+
 export function ChatComposer({
   selectedAgent,
   onSelectAgent,
@@ -42,6 +44,7 @@ export function ChatComposer({
 }) {
   const [value, setValue] = useState("")
   const [mention, setMention] = useState<MentionState | null>(null)
+  const [tokenExpanded, setTokenExpanded] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const skillSource = selectedAgent ?? AGENTS[0]
@@ -129,16 +132,79 @@ export function ChatComposer({
           </Button>
         </div>
 
-        {/* Token usage */}
+        {/* Token usage - clickable to expand */}
         {tokenUsage && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Zap className="size-3 text-amber-500" />
-            <span>
-              <span className="font-medium text-foreground">{tokenUsage.total.toLocaleString()}</span> tokens
-            </span>
-            <span className="text-muted-foreground/60">
-              ({tokenUsage.prompt.toLocaleString()} 输入 / {tokenUsage.completion.toLocaleString()} 输出)
-            </span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setTokenExpanded(!tokenExpanded)}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted"
+            >
+              <Zap className="size-3 text-amber-500" />
+              <span className="font-medium text-foreground">
+                {Math.round((tokenUsage.total / MAX_CONTEXT_TOKENS) * 100)}%
+              </span>
+              <span className="text-muted-foreground/70">已使用</span>
+            </button>
+
+            {/* Expanded details popover */}
+            {tokenExpanded && (
+              <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-border bg-popover p-3 shadow-lg">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-medium text-foreground">Token 使用详情</span>
+                  <button
+                    type="button"
+                    onClick={() => setTokenExpanded(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <span className="sr-only">关闭</span>
+                    <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mb-3">
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="text-muted-foreground">上下文使用</span>
+                    <span className="font-medium text-foreground">
+                      {tokenUsage.total.toLocaleString()} / {MAX_CONTEXT_TOKENS.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all"
+                      style={{ width: `${Math.min((tokenUsage.total / MAX_CONTEXT_TOKENS) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="size-2 rounded-full bg-blue-500" />
+                      输入 Token
+                    </span>
+                    <span className="font-medium text-foreground">{tokenUsage.prompt.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="size-2 rounded-full bg-green-500" />
+                      输出 Token
+                    </span>
+                    <span className="font-medium text-foreground">{tokenUsage.completion.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-border pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">总计</span>
+                      <span className="font-semibold text-foreground">{tokenUsage.total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
