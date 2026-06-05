@@ -1,11 +1,19 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ArrowUp, Mic, Paperclip, AtSign, Slash, Square } from "lucide-react"
+import { ArrowUp, Mic, Paperclip, AtSign, Slash, Square, Lightbulb, Play, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { AGENTS } from "@/lib/mock-data"
 import type { Agent, AgentId } from "@/lib/types"
+
+type ChatMode = "planning" | "execution"
+
+interface TokenUsage {
+  prompt: number
+  completion: number
+  total: number
+}
 
 interface MentionState {
   type: "agent" | "skill"
@@ -19,12 +27,18 @@ export function ChatComposer({
   onSend,
   isStreaming,
   onStop,
+  chatMode,
+  onModeChange,
+  tokenUsage,
 }: {
   selectedAgent: Agent | undefined
   onSelectAgent: (id: AgentId) => void
   onSend: (text: string) => void
   isStreaming?: boolean
   onStop?: () => void
+  chatMode: ChatMode
+  onModeChange: (mode: ChatMode) => void
+  tokenUsage: TokenUsage | null
 }) {
   const [value, setValue] = useState("")
   const [mention, setMention] = useState<MentionState | null>(null)
@@ -91,6 +105,44 @@ export function ChatComposer({
 
   return (
     <div className="relative rounded-2xl border border-border bg-card shadow-sm">
+      {/* Mode switcher (left) and Token usage (right) above input */}
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        {/* Mode switcher */}
+        <div className="flex items-center rounded-lg border border-border bg-muted/50 p-0.5">
+          <Button
+            variant={chatMode === "planning" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-6 gap-1 rounded-md px-2 text-xs"
+            onClick={() => onModeChange("planning")}
+          >
+            <Lightbulb className="size-3" />
+            规划
+          </Button>
+          <Button
+            variant={chatMode === "execution" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-6 gap-1 rounded-md px-2 text-xs"
+            onClick={() => onModeChange("execution")}
+          >
+            <Play className="size-3" />
+            执行
+          </Button>
+        </div>
+
+        {/* Token usage */}
+        {tokenUsage && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Zap className="size-3 text-amber-500" />
+            <span>
+              <span className="font-medium text-foreground">{tokenUsage.total.toLocaleString()}</span> tokens
+            </span>
+            <span className="text-muted-foreground/60">
+              ({tokenUsage.prompt.toLocaleString()} 输入 / {tokenUsage.completion.toLocaleString()} 输出)
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* mention dropdown */}
       {mention && (
         <div className="absolute bottom-full left-3 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">

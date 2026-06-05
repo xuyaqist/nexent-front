@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { PanelRight, ArrowLeft, Lightbulb, Play } from "lucide-react"
+import { PanelRight, ArrowLeft } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
@@ -9,7 +9,6 @@ import { WelcomeScreen } from "@/components/chat/welcome-screen"
 import { ChatThread } from "@/components/chat/chat-thread"
 import { ChatComposer } from "@/components/chat/chat-composer"
 import { TaskPanel } from "@/components/chat/task-panel"
-import { TokenUsageWidget } from "@/components/chat/token-usage-widget"
 import { useChat } from "@/hooks/use-chat"
 import { getAgent } from "@/lib/mock-data"
 import type { AgentId } from "@/lib/types"
@@ -96,7 +95,6 @@ export default function Page() {
   }
 
   const showPanel = chatMode === "planning" && hasPlan && panelOpen
-  const showFloatingToken = chatMode === "execution" && hasMessages && tokenUsage
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -125,34 +123,9 @@ export default function Page() {
               </Button>
             )}
 
-            {/* Mode switcher - centered with title */}
-            <div className="mx-auto flex items-center gap-3">
-              <h2 className="truncate text-sm font-semibold text-foreground">
-                {activeConversation?.title ?? "新对话"}
-              </h2>
-              {selectedAgent && (
-                <div className="flex items-center rounded-lg border border-border bg-muted/50 p-0.5">
-                  <Button
-                    variant={chatMode === "planning" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 gap-1.5 rounded-md px-2.5 text-xs"
-                    onClick={() => setChatMode("planning")}
-                  >
-                    <Lightbulb className="size-3.5" />
-                    规划模式
-                  </Button>
-                  <Button
-                    variant={chatMode === "execution" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 gap-1.5 rounded-md px-2.5 text-xs"
-                    onClick={() => setChatMode("execution")}
-                  >
-                    <Play className="size-3.5" />
-                    执行模式
-                  </Button>
-                </div>
-              )}
-            </div>
+            <h2 className="mx-auto truncate text-sm font-semibold text-foreground">
+              {activeConversation?.title ?? "新对话"}
+            </h2>
 
             {chatMode === "planning" && hasPlan && !panelOpen && (
               <Button
@@ -197,6 +170,9 @@ export default function Page() {
                     onSend={handleSend}
                     isStreaming={isStreaming}
                     onStop={stop}
+                    chatMode={chatMode}
+                    onModeChange={setChatMode}
+                    tokenUsage={tokenUsage}
                   />
                   <p className="mt-2 text-center text-xs text-muted-foreground">内容由 AI 生成，请仔细甄别</p>
                 </div>
@@ -207,13 +183,6 @@ export default function Page() {
 
         {showPanel && activeConversation && (
           <TaskPanel conversation={activeConversation} onClose={() => setPanelOpen(false)} />
-        )}
-
-        {/* Floating Token Widget for execution mode */}
-        {showFloatingToken && (
-          <div className="fixed bottom-6 right-6 z-50">
-            <TokenUsageWidget usage={tokenUsage} />
-          </div>
         )}
       </div>
     </TooltipProvider>
