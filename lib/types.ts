@@ -12,6 +12,8 @@ export interface Agent {
   role: string
   requirements: string
   examples: string
+  openingMessage: string
+  exampleQuestions: string[]
   tools: string[]
   skills: string[]
   collaborators: string[]

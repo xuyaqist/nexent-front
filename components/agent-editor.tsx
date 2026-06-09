@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, Bot, GitBranch, Sparkles, Settings2, Play, Save, Send } from "lucide-react"
+import { ArrowLeft, Bot, GitBranch, Sparkles, Settings2, Play, Save, Send, Plus, X, MessageSquare } from "lucide-react"
 import type { Agent } from "@/lib/types"
 import { MODELS, PROMPT_TEMPLATES } from "@/lib/types"
 import { AgentCapabilityPanel } from "@/components/agent-capability-panel"
@@ -41,6 +41,21 @@ export function AgentEditor({ agent, onBack, onSave, onPublish }: AgentEditorPro
     setDraft((prev) => ({
       ...prev,
       skills: prev.skills.includes(skill) ? prev.skills.filter((s) => s !== skill) : [...prev.skills, skill],
+    }))
+
+  const updateExampleQuestion = (index: number, value: string) =>
+    setDraft((prev) => ({
+      ...prev,
+      exampleQuestions: prev.exampleQuestions.map((q, i) => (i === index ? value : q)),
+    }))
+
+  const addExampleQuestion = () =>
+    setDraft((prev) => ({ ...prev, exampleQuestions: [...prev.exampleQuestions, ""] }))
+
+  const removeExampleQuestion = (index: number) =>
+    setDraft((prev) => ({
+      ...prev,
+      exampleQuestions: prev.exampleQuestions.filter((_, i) => i !== index),
     }))
 
   return (
@@ -146,6 +161,7 @@ export function AgentEditor({ agent, onBack, onSave, onPublish }: AgentEditorPro
                 <TabsTrigger value="role">智能体角色</TabsTrigger>
                 <TabsTrigger value="req">使用要求</TabsTrigger>
                 <TabsTrigger value="example">示例</TabsTrigger>
+                <TabsTrigger value="conversation">对话设置</TabsTrigger>
               </TabsList>
 
               <TabsContent value="info" className="mt-4 space-y-4">
@@ -234,6 +250,63 @@ export function AgentEditor({ agent, onBack, onSave, onPublish }: AgentEditorPro
                     className="min-h-44 resize-none"
                   />
                 </Field>
+              </TabsContent>
+
+              <TabsContent value="conversation" className="mt-4 space-y-5">
+                <Field label="开场白">
+                  <Textarea
+                    value={draft.openingMessage}
+                    onChange={(e) => update("openingMessage", e.target.value)}
+                    placeholder="设置智能体在对话开始时主动发送的问候语…"
+                    className="min-h-24 resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">用户开启对话时，智能体会首先发送这段开场白。</p>
+                </Field>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">示例问题</Label>
+                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={addExampleQuestion}>
+                      <Plus className="size-3.5" />
+                      添加问题
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    示例问题会展示在对话界面，帮助用户快速了解智能体的能力。
+                  </p>
+
+                  {draft.exampleQuestions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-8 text-center">
+                      <MessageSquare className="size-6 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">暂无示例问题，点击「添加问题」创建</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {draft.exampleQuestions.map((q, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-primary">
+                            {i + 1}
+                          </span>
+                          <Input
+                            value={q}
+                            onChange={(e) => updateExampleQuestion(i, e.target.value)}
+                            placeholder={`示例问题 ${i + 1}`}
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeExampleQuestion(i)}
+                            aria-label="删除问题"
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
           </div>
