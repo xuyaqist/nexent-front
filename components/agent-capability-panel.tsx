@@ -1,9 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Globe, Plus, RefreshCw, Settings2, Lightbulb, Check, Zap } from "lucide-react"
+import { ChevronRight, Globe, Plus, RefreshCw, Settings2, Lightbulb, Check, Zap, Wrench, X } from "lucide-react"
 import { TOOL_GROUPS, TOOL_SOURCES, SKILL_GROUPS } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface CapabilityPanelProps {
   selectedTools: string[]
@@ -13,16 +22,21 @@ interface CapabilityPanelProps {
 }
 
 export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTool, onToggleSkill }: CapabilityPanelProps) {
-  const [activeTab, setActiveTab] = useState<"tools" | "skills">("tools")
   const [activeSource, setActiveSource] = useState("本地工具")
   const [openGroups, setOpenGroups] = useState<string[]>(["database"])
   const [openSkillGroups, setOpenSkillGroups] = useState<string[]>(["数据处理"])
+  const [toolDialogOpen, setToolDialogOpen] = useState(false)
+  const [skillDialogOpen, setSkillDialogOpen] = useState(false)
 
   const toggleGroup = (cat: string) =>
     setOpenGroups((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]))
 
   const toggleSkillGroup = (cat: string) =>
     setOpenSkillGroups((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]))
+
+  // 查找技能描述
+  const findSkillDesc = (name: string) =>
+    SKILL_GROUPS.flatMap((g) => g.skills).find((s) => s.name === name)?.description ?? ""
 
   return (
     <section className="rounded-xl border border-border bg-card p-6">
@@ -49,30 +63,6 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
         </button>
       </div>
 
-      {/* 工具 / 技能 切换 */}
-      <div className="mb-3 grid grid-cols-2 rounded-lg border border-border p-1">
-        <button
-          onClick={() => setActiveTab("tools")}
-          className={cn(
-            "flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors",
-            activeTab === "tools" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-          )}
-        >
-          选择工具
-          <Lightbulb className="size-3.5 text-amber-500" />
-        </button>
-        <button
-          onClick={() => setActiveTab("skills")}
-          className={cn(
-            "flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors",
-            activeTab === "skills" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-          )}
-        >
-          选择技能
-          <Zap className="size-3.5 text-primary" />
-        </button>
-      </div>
-
       <div className="mb-4 flex items-center justify-end gap-4 text-sm">
         <button className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700">
           <RefreshCw className="size-3.5" />
@@ -84,11 +74,93 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
         </button>
       </div>
 
-      {/* 工具来源 + 工具/技能列表 */}
-      <div className="flex min-h-[340px] gap-3 border-t border-border pt-4">
-        {activeTab === "tools" ? (
-          <>
-            <nav className="flex w-28 shrink-0 flex-col gap-1">
+      {/* 已选择工具 */}
+      <div className="mb-5 border-t border-border pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            已选择工具
+            <Lightbulb className="size-3.5 text-amber-500" />
+            <span className="text-xs text-muted-foreground">({selectedTools.length})</span>
+          </span>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setToolDialogOpen(true)}>
+            <Wrench className="size-3.5" />
+            选择工具
+          </Button>
+        </div>
+        {selectedTools.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {selectedTools.map((tool) => (
+              <Badge key={tool} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1.5">
+                {tool}
+                <button
+                  onClick={() => onToggleTool(tool)}
+                  className="flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
+                  aria-label={`移除 ${tool}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
+            暂未选择工具，点击「选择工具」添加
+          </div>
+        )}
+      </div>
+
+      {/* 已选择技能 */}
+      <div className="border-t border-border pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            已选择技能
+            <Zap className="size-3.5 text-primary" />
+            <span className="text-xs text-muted-foreground">({selectedSkills.length})</span>
+          </span>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSkillDialogOpen(true)}>
+            <Zap className="size-3.5" />
+            选择技能
+          </Button>
+        </div>
+        {selectedSkills.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {selectedSkills.map((skill) => (
+              <Badge
+                key={skill}
+                variant="outline"
+                className="gap-1 border-primary/30 py-1 pl-2.5 pr-1.5 text-primary"
+                title={findSkillDesc(skill)}
+              >
+                {skill}
+                <button
+                  onClick={() => onToggleSkill(skill)}
+                  className="flex size-4 items-center justify-center rounded-full transition-colors hover:bg-primary/10"
+                  aria-label={`移除 ${skill}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
+            暂未选择技能，点击「选择技能」添加
+          </div>
+        )}
+      </div>
+
+      {/* 选择工具弹窗 */}
+      <Dialog open={toolDialogOpen} onOpenChange={setToolDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="size-4" />
+              选择工具
+            </DialogTitle>
+            <DialogDescription>从工具来源中选择智能体可调用的工具，已选择 {selectedTools.length} 个。</DialogDescription>
+          </DialogHeader>
+          <div className="flex max-h-[60vh] min-h-[340px] gap-3">
+            <nav className="flex w-28 shrink-0 flex-col gap-1 overflow-y-auto">
               {TOOL_SOURCES.map((src) => (
                 <button
                   key={src}
@@ -105,7 +177,7 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
               ))}
             </nav>
 
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 overflow-y-auto pr-1">
               {TOOL_GROUPS.map((group) => {
                 const open = openGroups.includes(group.category)
                 return (
@@ -146,9 +218,21 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
                 )
               })}
             </div>
-          </>
-        ) : (
-          <div className="flex-1 space-y-2">
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 选择技能弹窗 */}
+      <Dialog open={skillDialogOpen} onOpenChange={setSkillDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="size-4" />
+              选择技能
+            </DialogTitle>
+            <DialogDescription>为智能体选择内置技能，已选择 {selectedSkills.length} 个。</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] min-h-[340px] space-y-2 overflow-y-auto pr-1">
             {SKILL_GROUPS.map((group) => {
               const open = openSkillGroups.includes(group.category)
               return (
@@ -192,8 +276,8 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
               )
             })}
           </div>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
