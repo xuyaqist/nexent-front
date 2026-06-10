@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Globe, Plus, RefreshCw, Settings2, Lightbulb, Check, Zap, Wrench, X } from "lucide-react"
-import { TOOL_GROUPS, TOOL_SOURCES, SKILL_GROUPS } from "@/lib/types"
+import { ChevronRight, Globe, Plus, RefreshCw, Settings2, Lightbulb, Check, Zap, Wrench, X, Search } from "lucide-react"
+import { TOOL_GROUPS, TOOL_SOURCES, TOOL_TAGS, SKILL_GROUPS } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,8 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
   const [openSkillGroups, setOpenSkillGroups] = useState<string[]>(["数据处理"])
   const [toolDialogOpen, setToolDialogOpen] = useState(false)
   const [skillDialogOpen, setSkillDialogOpen] = useState(false)
+  const [toolQuery, setToolQuery] = useState("")
+  const [skillQuery, setSkillQuery] = useState("")
 
   const toggleGroup = (cat: string) =>
     setOpenGroups((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]))
@@ -49,6 +52,35 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
     category: group.category,
     items: group.skills.map((s) => s.name).filter((name) => selectedSkills.includes(name)),
   })).filter((g) => g.items.length > 0)
+
+  // 工具检索：按名称或标签匹配
+  const toolMatches = (tool: string, q: string) => {
+    const kw = q.trim().toLowerCase()
+    if (!kw) return true
+    if (tool.toLowerCase().includes(kw)) return true
+    return (TOOL_TAGS[tool] ?? []).some((tag) => tag.toLowerCase().includes(kw))
+  }
+
+  // 过滤后的工具分组（保留含匹配工具的分类）
+  const filteredToolGroups = TOOL_GROUPS.map((group) => ({
+    category: group.category,
+    tools: group.tools.filter((t) => toolMatches(t, toolQuery)),
+  })).filter((g) => g.tools.length > 0)
+
+  // 技能检索：按名称、描述或标签匹配
+  const skillMatches = (skill: { name: string; description: string; tags: string[] }, q: string) => {
+    const kw = q.trim().toLowerCase()
+    if (!kw) return true
+    if (skill.name.toLowerCase().includes(kw)) return true
+    if (skill.description.toLowerCase().includes(kw)) return true
+    return skill.tags.some((tag) => tag.toLowerCase().includes(kw))
+  }
+
+  // 过滤后的技能分组（保留含匹配技能的分类）
+  const filteredSkillGroups = SKILL_GROUPS.map((group) => ({
+    category: group.category,
+    skills: group.skills.filter((s) => skillMatches(s, skillQuery)),
+  })).filter((g) => g.skills.length > 0)
 
   return (
     <section className="rounded-xl border border-border bg-card p-6">
@@ -189,6 +221,15 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
             </DialogTitle>
             <DialogDescription>从工具来源中选择智能体可调用的工具，已选择 {selectedTools.length} 个。</DialogDescription>
           </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={toolQuery}
+              onChange={(e) => setToolQuery(e.target.value)}
+              placeholder="搜索工具名称或标签，如「数据库」「邮件」…"
+              className="pl-9"
+            />
+          </div>
           <div className="flex max-h-[60vh] min-h-[340px] gap-3">
             <nav className="flex w-28 shrink-0 flex-col gap-1 overflow-y-auto">
               {TOOL_SOURCES.map((src) => (
@@ -208,45 +249,62 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
             </nav>
 
             <div className="flex-1 space-y-2 overflow-y-auto pr-1">
-              {TOOL_GROUPS.map((group) => {
-                const open = openGroups.includes(group.category)
-                return (
-                  <div key={group.category} className="overflow-hidden rounded-lg border border-border">
-                    <button
-                      onClick={() => toggleGroup(group.category)}
-                      className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
-                    >
-                      <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
-                      {group.category}
-                    </button>
-                    {open && (
-                      <ul className="divide-y divide-border">
-                        {group.tools.map((tool) => {
-                          const selected = selectedTools.includes(tool)
-                          return (
-                            <li key={tool}>
-                              <button
-                                onClick={() => onToggleTool(tool)}
-                                className="flex w-full items-center justify-between px-3 py-2 pl-9 text-left text-sm text-muted-foreground hover:bg-accent/50"
-                              >
-                                {tool}
-                                <span
-                                  className={cn(
-                                    "flex size-4 items-center justify-center rounded border",
-                                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
-                                  )}
+              {filteredToolGroups.length === 0 ? (
+                <div className="flex h-full items-center justify-center py-12 text-sm text-muted-foreground">
+                  未找到匹配「{toolQuery}」的工具
+                </div>
+              ) : (
+                filteredToolGroups.map((group) => {
+                  const open = openGroups.includes(group.category) || toolQuery.trim() !== ""
+                  return (
+                    <div key={group.category} className="overflow-hidden rounded-lg border border-border">
+                      <button
+                        onClick={() => toggleGroup(group.category)}
+                        className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
+                      >
+                        <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+                        {group.category}
+                        <span className="text-xs text-muted-foreground">（{group.tools.length}）</span>
+                      </button>
+                      {open && (
+                        <ul className="divide-y divide-border">
+                          {group.tools.map((tool) => {
+                            const selected = selectedTools.includes(tool)
+                            return (
+                              <li key={tool}>
+                                <button
+                                  onClick={() => onToggleTool(tool)}
+                                  className="flex w-full items-center justify-between gap-3 px-3 py-2 pl-9 text-left text-sm text-muted-foreground hover:bg-accent/50"
                                 >
-                                  {selected && <Check className="size-3" />}
-                                </span>
-                              </button>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                )
-              })}
+                                  <span className="flex flex-1 flex-wrap items-center gap-2">
+                                    <span className="text-foreground">{tool}</span>
+                                    {(TOOL_TAGS[tool] ?? []).map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "flex size-4 shrink-0 items-center justify-center rounded border",
+                                      selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                                    )}
+                                  >
+                                    {selected && <Check className="size-3" />}
+                                  </span>
+                                </button>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  )
+                })
+              )}
             </div>
           </div>
         </DialogContent>
@@ -262,49 +320,75 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
             </DialogTitle>
             <DialogDescription>为智能体选择内置技能，已选择 {selectedSkills.length} 个。</DialogDescription>
           </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={skillQuery}
+              onChange={(e) => setSkillQuery(e.target.value)}
+              placeholder="搜索技能名称或标签，如「数据」「分析」…"
+              className="pl-9"
+            />
+          </div>
           <div className="max-h-[60vh] min-h-[340px] space-y-2 overflow-y-auto pr-1">
-            {SKILL_GROUPS.map((group) => {
-              const open = openSkillGroups.includes(group.category)
-              return (
-                <div key={group.category} className="overflow-hidden rounded-lg border border-border">
-                  <button
-                    onClick={() => toggleSkillGroup(group.category)}
-                    className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
-                  >
-                    <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
-                    {group.category}
-                  </button>
-                  {open && (
-                    <ul className="divide-y divide-border">
-                      {group.skills.map((skill) => {
-                        const selected = selectedSkills.includes(skill.name)
-                        return (
-                          <li key={skill.name}>
-                            <button
-                              onClick={() => onToggleSkill(skill.name)}
-                              className="flex w-full items-center justify-between px-3 py-2 pl-9 text-left text-sm hover:bg-accent/50"
-                            >
-                              <div>
-                                <span className="text-foreground">{skill.name}</span>
-                                <p className="text-xs text-muted-foreground">{skill.description}</p>
-                              </div>
-                              <span
-                                className={cn(
-                                  "flex size-4 shrink-0 items-center justify-center rounded border",
-                                  selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
-                                )}
+            {filteredSkillGroups.length === 0 ? (
+              <div className="flex h-full items-center justify-center py-12 text-sm text-muted-foreground">
+                未找到匹配「{skillQuery}」的技能
+              </div>
+            ) : (
+              filteredSkillGroups.map((group) => {
+                const open = openSkillGroups.includes(group.category) || skillQuery.trim() !== ""
+                return (
+                  <div key={group.category} className="overflow-hidden rounded-lg border border-border">
+                    <button
+                      onClick={() => toggleSkillGroup(group.category)}
+                      className="flex w-full items-center gap-2 bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground"
+                    >
+                      <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+                      {group.category}
+                      <span className="text-xs text-muted-foreground">（{group.skills.length}）</span>
+                    </button>
+                    {open && (
+                      <ul className="divide-y divide-border">
+                        {group.skills.map((skill) => {
+                          const selected = selectedSkills.includes(skill.name)
+                          return (
+                            <li key={skill.name}>
+                              <button
+                                onClick={() => onToggleSkill(skill.name)}
+                                className="flex w-full items-center justify-between gap-3 px-3 py-2 pl-9 text-left text-sm hover:bg-accent/50"
                               >
-                                {selected && <Check className="size-3" />}
-                              </span>
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )
-            })}
+                                <div className="flex-1">
+                                  <span className="text-foreground">{skill.name}</span>
+                                  <p className="text-xs text-muted-foreground">{skill.description}</p>
+                                  <div className="mt-1 flex flex-wrap gap-1.5">
+                                    {skill.tags.map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                                <span
+                                  className={cn(
+                                    "flex size-4 shrink-0 items-center justify-center rounded border",
+                                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                                  )}
+                                >
+                                  {selected && <Check className="size-3" />}
+                                </span>
+                              </button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })
+            )}
           </div>
         </DialogContent>
       </Dialog>
