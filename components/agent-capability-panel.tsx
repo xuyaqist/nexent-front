@@ -38,6 +38,18 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
   const findSkillDesc = (name: string) =>
     SKILL_GROUPS.flatMap((g) => g.skills).find((s) => s.name === name)?.description ?? ""
 
+  // 将已选工具按分类分组（保持 TOOL_GROUPS 中的分类顺序）
+  const groupedTools = TOOL_GROUPS.map((group) => ({
+    category: group.category,
+    items: group.tools.filter((t) => selectedTools.includes(t)),
+  })).filter((g) => g.items.length > 0)
+
+  // 将已选技能按分类分组（保持 SKILL_GROUPS 中的分类顺序）
+  const groupedSkills = SKILL_GROUPS.map((group) => ({
+    category: group.category,
+    items: group.skills.map((s) => s.name).filter((name) => selectedSkills.includes(name)),
+  })).filter((g) => g.items.length > 0)
+
   return (
     <section className="rounded-xl border border-border bg-card p-6">
       <div className="mb-5 flex items-center gap-2">
@@ -88,18 +100,27 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
           </Button>
         </div>
         {selectedTools.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {selectedTools.map((tool) => (
-              <Badge key={tool} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1.5">
-                {tool}
-                <button
-                  onClick={() => onToggleTool(tool)}
-                  className="flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
-                  aria-label={`移除 ${tool}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
+          <div className="space-y-3">
+            {groupedTools.map((group) => (
+              <div key={group.category}>
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  {group.category}（{group.items.length}）
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.items.map((tool) => (
+                    <Badge key={tool} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1.5">
+                      {tool}
+                      <button
+                        onClick={() => onToggleTool(tool)}
+                        className="flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
+                        aria-label={`移除 ${tool}`}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
@@ -123,23 +144,32 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
           </Button>
         </div>
         {selectedSkills.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {selectedSkills.map((skill) => (
-              <Badge
-                key={skill}
-                variant="outline"
-                className="gap-1 border-primary/30 py-1 pl-2.5 pr-1.5 text-primary"
-                title={findSkillDesc(skill)}
-              >
-                {skill}
-                <button
-                  onClick={() => onToggleSkill(skill)}
-                  className="flex size-4 items-center justify-center rounded-full transition-colors hover:bg-primary/10"
-                  aria-label={`移除 ${skill}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
+          <div className="space-y-3">
+            {groupedSkills.map((group) => (
+              <div key={group.category}>
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  {group.category}（{group.items.length}）
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.items.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant="outline"
+                      className="gap-1 border-primary/30 py-1 pl-2.5 pr-1.5 text-primary"
+                      title={findSkillDesc(skill)}
+                    >
+                      {skill}
+                      <button
+                        onClick={() => onToggleSkill(skill)}
+                        className="flex size-4 items-center justify-center rounded-full transition-colors hover:bg-primary/10"
+                        aria-label={`移除 ${skill}`}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
