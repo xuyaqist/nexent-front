@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Plus, Search, MoreVertical, Pencil, GitBranch, Clock, Upload, TrendingUp } from "lucide-react"
+import { Bot, Plus, Search, MoreVertical, Pencil, GitBranch, Clock, Upload, TrendingUp, Share2, CheckCircle2 } from "lucide-react"
 import { useRef, useState } from "react"
 import type { Agent } from "@/lib/types"
 import { Input } from "@/components/ui/input"
@@ -24,9 +24,10 @@ interface AgentListProps {
   onDelete: (id: string) => void
   onImport: (file: File) => void
   onEvaluate: (agent: Agent) => void
+  onPublishToHub: (agent: Agent) => void
 }
 
-export function AgentList({ agents, onEdit, onCreate, onDelete, onImport, onEvaluate }: AgentListProps) {
+export function AgentList({ agents, onEdit, onCreate, onDelete, onImport, onEvaluate, onPublishToHub }: AgentListProps) {
   const [query, setQuery] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -90,7 +91,14 @@ export function AgentList({ agents, onEdit, onCreate, onDelete, onImport, onEval
         </button>
 
         {filtered.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} onEdit={onEdit} onDelete={onDelete} onEvaluate={onEvaluate} />
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onEvaluate={onEvaluate}
+            onPublishToHub={onPublishToHub}
+          />
         ))}
       </div>
 
@@ -106,11 +114,13 @@ function AgentCard({
   onEdit,
   onDelete,
   onEvaluate,
+  onPublishToHub,
 }: {
   agent: Agent
   onEdit: (agent: Agent) => void
   onDelete: (id: string) => void
   onEvaluate: (agent: Agent) => void
+  onPublishToHub: (agent: Agent) => void
 }) {
   return (
     <div
@@ -128,6 +138,12 @@ function AgentCard({
               <span className="rounded border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                 {agent.version}
               </span>
+              {agent.publishedToHub && (
+                <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                  <Share2 className="size-3" />
+                  Hub
+                </span>
+              )}
             </div>
             <span
               className={
@@ -155,6 +171,10 @@ function AgentCard({
             <DropdownMenuItem onClick={() => onEvaluate(agent)}>
               <TrendingUp className="size-4" />
               评估
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onPublishToHub(agent)} disabled={agent.publishedToHub}>
+              {agent.publishedToHub ? <CheckCircle2 className="size-4" /> : <Share2 className="size-4" />}
+              {agent.publishedToHub ? "已发布至 AgentHub" : "发布至 AgentHub"}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

@@ -24,6 +24,7 @@ export function createEmptyAgent(): Agent {
     status: "draft",
     version: "v1.0",
     versionCount: 1,
+    publishedToHub: false,
     updatedAt: new Date().toISOString(),
   }
 }
@@ -44,6 +45,7 @@ export function normalizeImportedAgent(raw: unknown): Agent {
     status: "draft",
     version: typeof data.version === "string" ? data.version : "v1.0",
     versionCount: typeof data.versionCount === "number" ? data.versionCount : 1,
+    publishedToHub: false,
     updatedAt: new Date().toISOString(),
   }
 }
@@ -72,6 +74,7 @@ export const SAMPLE_AGENTS: Agent[] = [
     status: "published",
     version: "v2.3",
     versionCount: 5,
+    publishedToHub: true,
     updatedAt: "2026-05-20T09:00:00.000Z",
   },
   {
@@ -96,6 +99,7 @@ export const SAMPLE_AGENTS: Agent[] = [
     status: "published",
     version: "v1.4",
     versionCount: 3,
+    publishedToHub: false,
     updatedAt: "2026-05-18T14:30:00.000Z",
   },
   {
@@ -120,6 +124,7 @@ export const SAMPLE_AGENTS: Agent[] = [
     status: "draft",
     version: "v0.9",
     versionCount: 2,
+    publishedToHub: false,
     updatedAt: "2026-05-22T11:15:00.000Z",
   },
 ]

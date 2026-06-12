@@ -87,6 +87,24 @@ export function AgentManager() {
     toast({ title: "已删除智能体" })
   }
 
+  // 发布至 AgentHub（共享智能体广场）
+  const handlePublishToHub = (agent: Agent) => {
+    if (agent.publishedToHub) {
+      toast({
+        title: "已在 AgentHub 中",
+        description: `「${agent.name}」此前已发布至 AgentHub。`,
+      })
+      return
+    }
+    setAgents((prev) =>
+      prev.map((a) => (a.id === agent.id ? { ...a, publishedToHub: true } : a)),
+    )
+    toast({
+      title: "已发布至 AgentHub",
+      description: `「${agent.name}」已共享到 AgentHub，其他用户现在可以发现并使用它。`,
+    })
+  }
+
   const upsert = (updated: Agent, status?: Agent["status"]) => {
     setAgents((prev) =>
       prev.map((a) =>
@@ -147,6 +165,7 @@ export function AgentManager() {
             onDelete={handleDelete}
             onImport={handleImport}
             onEvaluate={handleEvaluate}
+            onPublishToHub={handlePublishToHub}
           />
         )
     }

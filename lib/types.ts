@@ -20,6 +20,7 @@ export interface Agent {
   status: "draft" | "published"
   version: string
   versionCount: number
+  publishedToHub: boolean
   updatedAt: string
 }
 
