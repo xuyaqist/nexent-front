@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Plus, Search, MoreVertical, Pencil, Wrench, Clock, Upload } from "lucide-react"
+import { Bot, Plus, Search, MoreVertical, Pencil, Wrench, Clock, Upload, TrendingUp } from "lucide-react"
 import { useRef, useState } from "react"
 import type { Agent } from "@/lib/types"
 import { Input } from "@/components/ui/input"
@@ -23,9 +23,10 @@ interface AgentListProps {
   onCreate: () => void
   onDelete: (id: string) => void
   onImport: (file: File) => void
+  onEvaluate: (agent: Agent) => void
 }
 
-export function AgentList({ agents, onEdit, onCreate, onDelete, onImport }: AgentListProps) {
+export function AgentList({ agents, onEdit, onCreate, onDelete, onImport, onEvaluate }: AgentListProps) {
   const [query, setQuery] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -89,7 +90,7 @@ export function AgentList({ agents, onEdit, onCreate, onDelete, onImport }: Agen
         </button>
 
         {filtered.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} onEdit={onEdit} onDelete={onDelete} />
+          <AgentCard key={agent.id} agent={agent} onEdit={onEdit} onDelete={onDelete} onEvaluate={onEvaluate} />
         ))}
       </div>
 
@@ -104,10 +105,12 @@ function AgentCard({
   agent,
   onEdit,
   onDelete,
+  onEvaluate,
 }: {
   agent: Agent
   onEdit: (agent: Agent) => void
   onDelete: (id: string) => void
+  onEvaluate: (agent: Agent) => void
 }) {
   return (
     <div
@@ -144,6 +147,10 @@ function AgentCard({
               <Pencil className="size-4" />
               编辑
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEvaluate(agent)}>
+              <TrendingUp className="size-4" />
+              评估
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => onDelete(agent.id)}
@@ -166,6 +173,19 @@ function AgentCard({
           {formatDate(agent.updatedAt)}
         </span>
       </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-3 w-full gap-1.5"
+        onClick={(e) => {
+          e.stopPropagation()
+          onEvaluate(agent)
+        }}
+      >
+        <TrendingUp className="size-4" />
+        效果评估
+      </Button>
     </div>
   )
 }

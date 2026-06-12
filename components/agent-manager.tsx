@@ -5,12 +5,13 @@ import type { Agent } from "@/lib/types"
 import { SAMPLE_AGENTS, createEmptyAgent, normalizeImportedAgent } from "@/lib/sample-agents"
 import { AgentList } from "@/components/agent-list"
 import { AgentEditor } from "@/components/agent-editor"
+import { AgentEvaluation } from "@/components/agent-evaluation"
 import { NL2AgentCreator } from "@/components/nl2agent-creator"
 import { CreateAgentDialog } from "@/components/create-agent-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
-type ViewMode = "list" | "editor" | "nl2agent"
+type ViewMode = "list" | "editor" | "nl2agent" | "evaluation"
 
 export function AgentManager() {
   const [agents, setAgents] = useState<Agent[]>(SAMPLE_AGENTS)
@@ -53,6 +54,11 @@ export function AgentManager() {
   const handleEdit = (agent: Agent) => {
     setEditingId(agent.id)
     setViewMode("editor")
+  }
+
+  const handleEvaluate = (agent: Agent) => {
+    setEditingId(agent.id)
+    setViewMode("evaluation")
   }
 
   const handleImport = async (file: File) => {
@@ -128,6 +134,10 @@ export function AgentManager() {
             onPublish={handlePublish}
           />
         ) : null
+      case "evaluation":
+        return editingAgent ? (
+          <AgentEvaluation key={editingAgent.id} agent={editingAgent} onBack={handleBackToList} />
+        ) : null
       default:
         return (
           <AgentList
@@ -136,6 +146,7 @@ export function AgentManager() {
             onCreate={handleCreate}
             onDelete={handleDelete}
             onImport={handleImport}
+            onEvaluate={handleEvaluate}
           />
         )
     }
