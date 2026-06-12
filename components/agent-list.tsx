@@ -135,9 +135,6 @@ function AgentCard({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-foreground">{agent.name}</h3>
-              <span className="rounded border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {agent.version}
-              </span>
               {agent.publishedToHub && (
                 <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
                   <Share2 className="size-3" />
@@ -191,7 +188,7 @@ function AgentCard({
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <GitBranch className="size-3.5" />
-          {agent.versionCount} 个版本
+          {agent.version}
         </span>
         <span className="flex items-center gap-1">
           <Clock className="size-3.5" />
