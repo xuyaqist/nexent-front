@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Plus, Search, MoreVertical, Pencil, Wrench, Clock, Upload, TrendingUp } from "lucide-react"
+import { Bot, Plus, Search, MoreVertical, Pencil, GitBranch, Clock, Upload, TrendingUp } from "lucide-react"
 import { useRef, useState } from "react"
 import type { Agent } from "@/lib/types"
 import { Input } from "@/components/ui/input"
@@ -123,7 +123,12 @@ function AgentCard({
             <Bot className="size-6" />
           </div>
           <div>
-            <h3 className="font-medium text-foreground">{agent.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-foreground">{agent.name}</h3>
+              <span className="rounded border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                {agent.version}
+              </span>
+            </div>
             <span
               className={
                 "mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium " +
@@ -165,8 +170,8 @@ function AgentCard({
 
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          <Wrench className="size-3.5" />
-          {agent.tools.length} 个工具
+          <GitBranch className="size-3.5" />
+          {agent.versionCount} 个版本
         </span>
         <span className="flex items-center gap-1">
           <Clock className="size-3.5" />
@@ -174,18 +179,32 @@ function AgentCard({
         </span>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-3 w-full gap-1.5"
-        onClick={(e) => {
-          e.stopPropagation()
-          onEvaluate(agent)
-        }}
-      >
-        <TrendingUp className="size-4" />
-        效果评估
-      </Button>
+      <div className="mt-3 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 gap-1.5"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(agent)
+          }}
+        >
+          <Pencil className="size-4" />
+          编辑
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 gap-1.5"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEvaluate(agent)
+          }}
+        >
+          <TrendingUp className="size-4" />
+          评估
+        </Button>
+      </div>
     </div>
   )
 }

@@ -18,6 +18,8 @@ export interface Agent {
   skills: string[]
   collaborators: string[]
   status: "draft" | "published"
+  version: string
+  versionCount: number
   updatedAt: string
 }
 

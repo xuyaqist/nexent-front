@@ -22,6 +22,8 @@ export function createEmptyAgent(): Agent {
     skills: [],
     collaborators: [],
     status: "draft",
+    version: "v1.0",
+    versionCount: 1,
     updatedAt: new Date().toISOString(),
   }
 }
@@ -40,6 +42,8 @@ export function normalizeImportedAgent(raw: unknown): Agent {
     exampleQuestions: Array.isArray(data.exampleQuestions) ? data.exampleQuestions : [],
     collaborators: Array.isArray(data.collaborators) ? data.collaborators : [],
     status: "draft",
+    version: typeof data.version === "string" ? data.version : "v1.0",
+    versionCount: typeof data.versionCount === "number" ? data.versionCount : 1,
     updatedAt: new Date().toISOString(),
   }
 }
@@ -66,6 +70,8 @@ export const SAMPLE_AGENTS: Agent[] = [
     skills: ["数据清洗", "数据聚合", "模板填充"],
     collaborators: [],
     status: "published",
+    version: "v2.3",
+    versionCount: 5,
     updatedAt: "2026-05-20T09:00:00.000Z",
   },
   {
@@ -88,6 +94,8 @@ export const SAMPLE_AGENTS: Agent[] = [
     skills: ["文档摘要", "邮件撰写", "格式转换"],
     collaborators: [],
     status: "published",
+    version: "v1.4",
+    versionCount: 3,
     updatedAt: "2026-05-18T14:30:00.000Z",
   },
   {
@@ -110,6 +118,8 @@ export const SAMPLE_AGENTS: Agent[] = [
     skills: ["数据清洗", "趋势分析", "决策建议"],
     collaborators: [],
     status: "draft",
+    version: "v0.9",
+    versionCount: 2,
     updatedAt: "2026-05-22T11:15:00.000Z",
   },
 ]
