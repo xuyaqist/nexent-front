@@ -19,26 +19,19 @@ export function ChatThread({
   isStreaming,
   onResolveHitl,
   onPickSuggestion,
+  onOpenSources,
 }: {
   conversation: Conversation
   isStreaming: boolean
   onResolveHitl: (msgId: string, approved: boolean) => void
   onPickSuggestion: (q: string) => void
+  onOpenSources: (id: number | null) => void
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // structured sources backing the latest answer (referenced inline as [n])
   const sources = conversation.sources ?? []
   const validIds = new Set(sources.map((s) => s.id))
-
-  // sidebar state, lifted so both the trigger and inline [n] badges can drive it
-  const [sourcesOpen, setSourcesOpen] = useState(false)
-  const [activeSourceId, setActiveSourceId] = useState<number | null>(null)
-
-  const openSources = (id: number | null = null) => {
-    setActiveSourceId(id)
-    setSourcesOpen(true)
-  }
 
   // only the most recent assistant message carries the current citations + trigger
   const lastAssistantId = [...conversation.messages].reverse().find((m) => m.role === "assistant")?.id
@@ -49,68 +42,56 @@ export function ChatThread({
   }, [conversation.messages, conversation.suggestions])
 
   return (
-    <>
-      <div className="mx-auto w-full max-w-3xl px-4 py-6">
-        <div className="space-y-6">
-          {conversation.messages.map((m) =>
-            m.role === "user" ? (
-              <UserMessage key={m.id} message={m} />
-            ) : (
-              <AssistantMessage
-                key={m.id}
-                message={m}
-                onResolveHitl={onResolveHitl}
-                citations={
-                  m.id === lastAssistantId && validIds.size > 0
-                    ? { validIds, onCitationClick: openSources }
-                    : undefined
-                }
-                sourcesTrigger={
-                  m.id === lastAssistantId && showSources
-                    ? { sources, onOpen: () => openSources(null) }
-                    : undefined
-                }
-              />
-            ),
-          )}
-        </div>
-
-        {/* follow-up suggestions */}
-        {!isStreaming && conversation.suggestions && conversation.suggestions.length > 0 && (
-          <div className="mt-6">
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Sparkles className="size-3.5 text-primary" />
-              你可能还想问
-            </p>
-            <div className="flex flex-col gap-2">
-              {conversation.suggestions.map((q) => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => onPickSuggestion(q)}
-                  className="group flex items-center gap-2 self-start rounded-full border border-primary/30 bg-primary/5 py-1.5 pl-4 pr-3 text-sm text-foreground transition-colors hover:bg-primary/10"
-                >
-                  {q}
-                  <ArrowUpRight className="size-3.5 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="mx-auto w-full max-w-3xl px-4 py-6">
+      <div className="space-y-6">
+        {conversation.messages.map((m) =>
+          m.role === "user" ? (
+            <UserMessage key={m.id} message={m} />
+          ) : (
+            <AssistantMessage
+              key={m.id}
+              message={m}
+              onResolveHitl={onResolveHitl}
+              citations={
+                m.id === lastAssistantId && validIds.size > 0
+                  ? { validIds, onCitationClick: (id) => onOpenSources(id) }
+                  : undefined
+              }
+              sourcesTrigger={
+                m.id === lastAssistantId && showSources
+                  ? { sources, onOpen: () => onOpenSources(null) }
+                  : undefined
+              }
+            />
+          ),
         )}
-
-        <div ref={bottomRef} />
       </div>
 
-      {/* sources sidebar drawer */}
-      {showSources && (
-        <SourcesSidebar
-          sources={sources}
-          open={sourcesOpen}
-          onClose={() => setSourcesOpen(false)}
-          activeId={activeSourceId}
-        />
+      {/* follow-up suggestions */}
+      {!isStreaming && conversation.suggestions && conversation.suggestions.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" />
+            你可能还想问
+          </p>
+          <div className="flex flex-col gap-2">
+            {conversation.suggestions.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => onPickSuggestion(q)}
+                className="group flex items-center gap-2 self-start rounded-full border border-primary/30 bg-primary/5 py-1.5 pl-4 pr-3 text-sm text-foreground transition-colors hover:bg-primary/10"
+              >
+                {q}
+                <ArrowUpRight className="size-3.5 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
+              </button>
+            ))}
+          </div>
+        </div>
       )}
-    </>
+
+      <div ref={bottomRef} />
+    </div>
   )
 }
 
@@ -145,8 +126,8 @@ function SourcesTrigger({ sources, onOpen }: { sources: Source[]; onOpen: () => 
   )
 }
 
-/** Right-side drawer listing all cited sources. */
-function SourcesSidebar({
+/** Side-by-side panel listing all cited sources (does not overlay the conversation). */
+export function SourcesSidebar({
   sources,
   open,
   onClose,
@@ -170,25 +151,16 @@ function SourcesSidebar({
   const kbCount = sources.filter((s) => s.type === "knowledge").length
 
   return (
-    <>
-      {/* backdrop */}
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-foreground/20 transition-opacity",
-          open ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
-        onClick={onClose}
-        aria-hidden
-      />
-
-      {/* drawer */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border bg-background shadow-xl transition-transform duration-300",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-        aria-label="信息来源"
-      >
+    <aside
+      className={cn(
+        "shrink-0 overflow-hidden border-l border-border bg-background transition-[width] duration-300",
+        open ? "w-[340px]" : "w-0",
+      )}
+      aria-label="信息来源"
+      aria-hidden={!open}
+    >
+      {/* fixed-width inner wrapper keeps content from squishing during the width animation */}
+      <div className="flex h-full w-[340px] flex-col">
         <header className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
           <BookOpen className="size-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">信息来源</h3>
@@ -280,8 +252,8 @@ function SourcesSidebar({
             )
           })}
         </ul>
-      </aside>
-    </>
+      </div>
+    </aside>
   )
 }
 

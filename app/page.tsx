@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
 import { WelcomeScreen } from "@/components/chat/welcome-screen"
-import { ChatThread } from "@/components/chat/chat-thread"
+import { ChatThread, SourcesSidebar } from "@/components/chat/chat-thread"
 import { ChatComposer } from "@/components/chat/chat-composer"
 import { TaskPanelInline } from "@/components/chat/task-panel-inline"
 import { useChat } from "@/hooks/use-chat"
@@ -31,8 +31,16 @@ export default function Page() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [chatMode, setChatMode] = useState<ChatMode>("planning")
+  const [sourcesOpen, setSourcesOpen] = useState(false)
+  const [activeSourceId, setActiveSourceId] = useState<number | null>(null)
 
   const selectedAgent = getAgent(activeConversation?.agentId)
+  const sources = activeConversation?.sources ?? []
+
+  function handleOpenSources(id: number | null) {
+    setActiveSourceId(id)
+    setSourcesOpen(true)
+  }
   const hasMessages = (activeConversation?.messages.length ?? 0) > 0
   const hasPlan = !!activeConversation?.plan && (activeConversation.plan.steps.length ?? 0) > 0
 
@@ -128,6 +136,7 @@ export default function Page() {
                   isStreaming={isStreaming}
                   onResolveHitl={(msgId, approved) => resolveHitl(activeConversation.id, msgId, approved)}
                   onPickSuggestion={handleSend}
+                  onOpenSources={handleOpenSources}
                 />
               ) : (
                 <WelcomeScreen
@@ -162,6 +171,16 @@ export default function Page() {
             )}
           </div>
         </main>
+
+        {/* sources panel — sits beside the conversation instead of covering it */}
+        {sources.length > 0 && (
+          <SourcesSidebar
+            sources={sources}
+            open={sourcesOpen}
+            onClose={() => setSourcesOpen(false)}
+            activeId={activeSourceId}
+          />
+        )}
       </div>
     </TooltipProvider>
   )
