@@ -29,14 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface AgentEvaluationProps {
   agent: Agent
@@ -191,6 +184,12 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   // 测评版本历史
   const [history, setHistory] = useState<EvalHistory[]>(() => buildMockHistory(agent))
 
+  // 分页：测试用例结果 & 测评历史
+  const CASE_PAGE_SIZE = 5
+  const HISTORY_PAGE_SIZE = 5
+  const [casePage, setCasePage] = useState(1)
+  const [historyPage, setHistoryPage] = useState(1)
+
   // 下载 CSV 模板（Excel 可直接打开）
   const handleDownloadTemplate = () => {
     const sample = [
@@ -225,6 +224,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
     setPhase("running")
     setProgress(0)
     setCases([])
+    setCasePage(1)
     const total = MOCK_INPUTS.length
     const all = buildMockCases()
     let i = 0
@@ -251,6 +251,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
           },
           ...prev,
         ])
+        setHistoryPage(1)
       }
     }, 600)
   }
@@ -263,6 +264,18 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const avgScore = total ? Math.round(cases.reduce((s, c) => s + c.score, 0) / total) : 0
   const avgLatency = total ? Math.round(cases.reduce((s, c) => s + c.latencyMs, 0) / total) : 0
   const passRate = total ? Math.round((passCount / total) * 100) : 0
+
+  // 分页切片（页码越界时自动收敛到末页）
+  const caseTotalPages = Math.max(1, Math.ceil(cases.length / CASE_PAGE_SIZE))
+  const safeCasePage = Math.min(casePage, caseTotalPages)
+  const pagedCases = cases.slice((safeCasePage - 1) * CASE_PAGE_SIZE, safeCasePage * CASE_PAGE_SIZE)
+
+  const historyTotalPages = Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE))
+  const safeHistoryPage = Math.min(historyPage, historyTotalPages)
+  const pagedHistory = history.slice(
+    (safeHistoryPage - 1) * HISTORY_PAGE_SIZE,
+    safeHistoryPage * HISTORY_PAGE_SIZE,
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -290,9 +303,11 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+      <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+        {/* 顶部：步骤一（左） + 测评历史（右） */}
+        <div className="grid gap-6 lg:grid-cols-5">
         {/* 步骤一：测试用例 */}
-        <section className="rounded-xl border border-border bg-card p-6">
+        <section className="rounded-xl border border-border bg-card p-6 lg:col-span-3">
           <div className="mb-5 flex items-center gap-2">
             <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               1
@@ -433,6 +448,54 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
         </section>
 
         {/* 步骤���：逐条评估结果 */}
+        {/* 测评版本历史（右列展示） */}
+        <section className="flex flex-col rounded-xl border border-border bg-card p-6 lg:col-span-2">
+          <div className="mb-5 flex items-center gap-2">
+            <History className="size-5 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">测评版本历史</h2>
+            <span className="text-sm text-muted-foreground">（{history.length} 次）</span>
+          </div>
+
+          {history.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
+              <History className="size-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">暂无测评记录，完成一次评估后将自动记录。</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 space-y-3">
+                {pagedHistory.map((h) => (
+                  <div key={h.id} className="rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
+                        <GitBranch className="size-3" />
+                        {h.version}
+                      </Badge>
+                      <span className="text-lg font-semibold text-foreground">{h.score}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="truncate">{h.model}</span>
+                      <span className="shrink-0">通过率 {h.passRate}%</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{formatDateTime(h.evaluatedAt)}</span>
+                      <span className="shrink-0">{h.caseCount} 条</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Pagination
+                page={safeHistoryPage}
+                totalPages={historyTotalPages}
+                onPrev={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                onNext={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+              />
+            </>
+          )}
+        </section>
+        </div>
+
+        {/* 步骤二：逐条评估结果 */}
         {cases.length > 0 && (
           <section className="rounded-xl border border-border bg-card p-6">
             <div className="mb-5 flex items-center gap-2">
@@ -444,7 +507,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
             </div>
 
             <div className="space-y-3">
-              {cases.map((c) => {
+              {pagedCases.map((c) => {
                 const meta = STATUS_META[c.status]
                 const Icon = meta.icon
                 return (
@@ -485,6 +548,13 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
                 )
               })}
             </div>
+
+            <Pagination
+              page={safeCasePage}
+              totalPages={caseTotalPages}
+              onPrev={() => setCasePage((p) => Math.max(1, p - 1))}
+              onNext={() => setCasePage((p) => Math.min(caseTotalPages, p + 1))}
+            />
           </section>
         )}
 
@@ -558,54 +628,6 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
             </div>
           </section>
         )}
-
-        {/* 测评版本历史 */}
-        <section className="rounded-xl border border-border bg-card p-6">
-          <div className="mb-5 flex items-center gap-2">
-            <History className="size-5 text-primary" />
-            <h2 className="text-base font-semibold text-foreground">测评版本历史</h2>
-            <span className="text-sm text-muted-foreground">（{history.length} 次）</span>
-          </div>
-
-          {history.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-10 text-center">
-              <History className="size-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">暂无测评记录，完成一次评估后将自动记录。</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>智能体版本</TableHead>
-                    <TableHead>测评模型</TableHead>
-                    <TableHead>测评时间</TableHead>
-                    <TableHead className="text-right">得分</TableHead>
-                    <TableHead className="text-right">通过率</TableHead>
-                    <TableHead className="text-right">用例数</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {history.map((h) => (
-                    <TableRow key={h.id}>
-                      <TableCell>
-                        <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
-                          <GitBranch className="size-3" />
-                          {h.version}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{h.model}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDateTime(h.evaluatedAt)}</TableCell>
-                      <TableCell className="text-right font-semibold text-foreground">{h.score}</TableCell>
-                      <TableCell className="text-right text-foreground">{h.passRate}%</TableCell>
-                      <TableCell className="text-right text-muted-foreground">{h.caseCount}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </section>
       </div>
     </div>
   )
@@ -621,6 +643,37 @@ function MetricCard({ label, value, highlight }: { label: string; value: string;
     >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={"mt-1 text-2xl font-semibold " + (highlight ? "text-primary" : "text-foreground")}>{value}</p>
+    </div>
+  )
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+}: {
+  page: number
+  totalPages: number
+  onPrev: () => void
+  onNext: () => void
+}) {
+  if (totalPages <= 1) return null
+  return (
+    <div className="mt-4 flex items-center justify-between gap-2 border-t border-border pt-4">
+      <span className="text-xs text-muted-foreground">
+        第 {page} / {totalPages} 页
+      </span>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className="gap-1" onClick={onPrev} disabled={page <= 1}>
+          <ChevronLeft className="size-4" />
+          上一页
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1" onClick={onNext} disabled={page >= totalPages}>
+          下一页
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
     </div>
   )
 }
