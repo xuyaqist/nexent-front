@@ -1,14 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { PanelRight, ArrowLeft } from "lucide-react"
+import { useMemo, useState } from "react"
+import { ArrowLeft } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
 import { WelcomeScreen } from "@/components/chat/welcome-screen"
 import { ChatThread } from "@/components/chat/chat-thread"
 import { ChatComposer } from "@/components/chat/chat-composer"
-import { TaskPanel } from "@/components/chat/task-panel"
+import { TaskPanelInline } from "@/components/chat/task-panel-inline"
 import { useChat } from "@/hooks/use-chat"
 import { getAgent } from "@/lib/mock-data"
 import type { AgentId } from "@/lib/types"
@@ -30,7 +30,6 @@ export default function Page() {
   } = useChat()
 
   const [collapsed, setCollapsed] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(true)
   const [chatMode, setChatMode] = useState<ChatMode>("planning")
 
   const selectedAgent = getAgent(activeConversation?.agentId)
@@ -73,11 +72,6 @@ export default function Page() {
     }
   }, [activeConversation])
 
-  // auto-open the task panel whenever a plan appears
-  useEffect(() => {
-    if (hasPlan) setPanelOpen(true)
-  }, [hasPlan])
-
   function handleBack() {
     setActiveAgent(null)
   }
@@ -91,7 +85,7 @@ export default function Page() {
     setActiveAgent(id)
   }
 
-  const showPanel = chatMode === "planning" && hasPlan && panelOpen
+  const showInlinePanel = chatMode === "planning" && hasPlan
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -123,18 +117,6 @@ export default function Page() {
             <h2 className="mx-auto truncate text-sm font-semibold text-foreground">
               {activeConversation?.title ?? "新对话"}
             </h2>
-
-            {chatMode === "planning" && hasPlan && !panelOpen && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-4 text-muted-foreground"
-                onClick={() => setPanelOpen(true)}
-                aria-label="打开任务面板"
-              >
-                <PanelRight className="size-5" />
-              </Button>
-            )}
           </header>
 
           {/* body */}
@@ -161,6 +143,9 @@ export default function Page() {
             {selectedAgent && (
               <div className="shrink-0 px-4 pb-4">
                 <div className="mx-auto w-full max-w-3xl">
+                  {showInlinePanel && activeConversation && (
+                    <TaskPanelInline conversation={activeConversation} />
+                  )}
                   <ChatComposer
                     selectedAgent={selectedAgent}
                     onSelectAgent={handleSelectAgent}
@@ -177,10 +162,6 @@ export default function Page() {
             )}
           </div>
         </main>
-
-        {showPanel && activeConversation && (
-          <TaskPanel conversation={activeConversation} onClose={() => setPanelOpen(false)} />
-        )}
       </div>
     </TooltipProvider>
   )
