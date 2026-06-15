@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { Sparkles, ArrowUpRight } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Sparkles, ArrowUpRight, BookOpen, ChevronDown, Database, FileText, Globe, Brain } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Markdown } from "./markdown"
 import {
   ReasoningBlock,
@@ -26,6 +27,11 @@ export function ChatThread({
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  // sources retrieved for the latest answer (surfaced from the context display)
+  const sources = (conversation.context ?? [])
+    .filter((c) => c.kind === "source")
+    .map((c) => c.value)
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [conversation.messages, conversation.suggestions])
@@ -41,6 +47,9 @@ export function ChatThread({
           ),
         )}
       </div>
+
+      {/* answer sources — surfaced above the follow-up suggestions */}
+      {!isStreaming && sources.length > 0 && <SourcesBlock sources={sources} />}
 
       {/* follow-up suggestions */}
       {!isStreaming && conversation.suggestions && conversation.suggestions.length > 0 && (
@@ -66,6 +75,51 @@ export function ChatThread({
       )}
 
       <div ref={bottomRef} />
+    </div>
+  )
+}
+
+function sourceIcon(value: string) {
+  const v = value.toLowerCase()
+  if (v.includes("数据表") || v.includes("table") || v.includes("看板") || v.includes("sql")) return Database
+  if (v.includes("文档") || v.includes("白皮书") || v.includes("doc") || v.includes("arxiv")) return FileText
+  if (v.includes("检索") || v.includes("search") || v.includes("web") || v.includes("官方")) return Globe
+  if (v.includes("历史") || v.includes("上下文") || v.includes("memory")) return Brain
+  return BookOpen
+}
+
+function SourcesBlock({ sources }: { sources: string[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-6 overflow-hidden rounded-xl border border-border bg-muted/30">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+      >
+        <BookOpen className="size-4 text-primary" />
+        <span>查看信息来源</span>
+        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+          {sources.length}
+        </span>
+        <ChevronDown className={cn("ml-auto size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <ul className="space-y-1.5 border-t border-border px-3 py-2.5">
+          {sources.map((s, i) => {
+            const Icon = sourceIcon(s)
+            return (
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-background text-[11px] font-medium text-muted-foreground">
+                  {i + 1}
+                </span>
+                <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <span className="text-foreground">{s}</span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
