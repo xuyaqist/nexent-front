@@ -14,10 +14,29 @@ import {
   Loader2,
   RotateCcw,
   TrendingUp,
+  Cpu,
+  GitBranch,
+  History,
 } from "lucide-react"
 import type { Agent } from "@/lib/types"
+import { MODELS } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 interface AgentEvaluationProps {
   agent: Agent
@@ -36,8 +55,70 @@ interface EvalCase {
   reason: string
 }
 
+// 测评版本历史记录
+interface EvalHistory {
+  id: string
+  version: string
+  model: string
+  score: number
+  passRate: number
+  caseCount: number
+  evaluatedAt: string
+}
+
 // CSV 模板列
 const TEMPLATE_HEADERS = ["序号", "测试输入", "预期输出", "备注"]
+
+// 根据当前版本号与版本数量，构造可选版本列表（首项为最新版本）
+function buildVersionOptions(agent: Agent): string[] {
+  const match = agent.version.match(/^v(\d+)\.(\d+)$/)
+  let major = 1
+  let minor = 0
+  if (match) {
+    major = Number(match[1])
+    minor = Number(match[2])
+  }
+  const list: string[] = []
+  for (let i = 0; i < Math.max(agent.versionCount, 1); i++) {
+    let m = minor - i
+    let mj = major
+    while (m < 0) {
+      mj -= 1
+      m += 10
+    }
+    list.push(`v${mj}.${m}`)
+  }
+  return list
+}
+
+// 预置的历史测评记录（模拟过往不同版本的评估结果）
+function buildMockHistory(agent: Agent): EvalHistory[] {
+  const versions = buildVersionOptions(agent)
+  const base = [
+    { daysAgo: 3, model: "gpt-5-mini", score: 88, passRate: 83 },
+    { daysAgo: 9, model: "kimi-k2.5", score: 79, passRate: 67 },
+    { daysAgo: 18, model: "claude-opus-4.6", score: 72, passRate: 50 },
+  ]
+  return base.slice(0, Math.max(versions.length, 1)).map((b, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - b.daysAgo)
+    return {
+      id: `h_${i}`,
+      version: versions[Math.min(i + 1, versions.length - 1)] ?? versions[0],
+      model: b.model,
+      score: b.score,
+      passRate: b.passRate,
+      caseCount: 6,
+      evaluatedAt: d.toISOString(),
+    }
+  })
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 // 模拟生成的测试用例（用户上传后展示）
 const MOCK_INPUTS = [
@@ -102,6 +183,14 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const [progress, setProgress] = useState(0)
   const [cases, setCases] = useState<EvalCase[]>([])
 
+  // 测评配置：模型与智能体版本
+  const versionOptions = buildVersionOptions(agent)
+  const [evalModel, setEvalModel] = useState<string>(MODELS[0])
+  const [evalVersion, setEvalVersion] = useState<string>(versionOptions[0])
+
+  // 测评版本历史
+  const [history, setHistory] = useState<EvalHistory[]>(() => buildMockHistory(agent))
+
   // 下载 CSV 模板（Excel 可直接打开）
   const handleDownloadTemplate = () => {
     const sample = [
@@ -146,6 +235,22 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
       if (i >= total) {
         clearInterval(timer)
         setPhase("done")
+        // 评估完成后写入版本历史
+        const passN = all.filter((c) => c.status === "pass").length
+        const avg = Math.round(all.reduce((s, c) => s + c.score, 0) / all.length)
+        const rate = Math.round((passN / all.length) * 100)
+        setHistory((prev) => [
+          {
+            id: `h_${Date.now()}`,
+            version: evalVersion,
+            model: evalModel,
+            score: avg,
+            passRate: rate,
+            caseCount: all.length,
+            evaluatedAt: new Date().toISOString(),
+          },
+          ...prev,
+        ])
       }
     }, 600)
   }
@@ -193,6 +298,50 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
               1
             </span>
             <h2 className="text-base font-semibold text-foreground">准备测试用例</h2>
+          </div>
+
+          {/* 测评配置：模型 + 智能体版本 */}
+          <div className="mb-5 grid gap-4 rounded-lg border border-border bg-secondary/30 p-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <Cpu className="size-4 text-primary" />
+                测评模型
+              </label>
+              <Select value={evalModel} onValueChange={setEvalModel} disabled={phase === "running"}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择测评模型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODELS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">用于对智能体输出进行打分评判的模型。</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <GitBranch className="size-4 text-primary" />
+                智能体版本
+              </label>
+              <Select value={evalVersion} onValueChange={setEvalVersion} disabled={phase === "running"}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择智能体版本" />
+                </SelectTrigger>
+                <SelectContent>
+                  {versionOptions.map((v, i) => (
+                    <SelectItem key={v} value={v}>
+                      {v}
+                      {i === 0 ? "（最新）" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">选择要评估的智能体版本。</p>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -283,7 +432,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
           )}
         </section>
 
-        {/* 步骤二：逐条评估结果 */}
+        {/* 步骤���：逐条评估结果 */}
         {cases.length > 0 && (
           <section className="rounded-xl border border-border bg-card p-6">
             <div className="mb-5 flex items-center gap-2">
@@ -409,6 +558,54 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
             </div>
           </section>
         )}
+
+        {/* 测评版本历史 */}
+        <section className="rounded-xl border border-border bg-card p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <History className="size-5 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">测评版本历史</h2>
+            <span className="text-sm text-muted-foreground">（{history.length} 次）</span>
+          </div>
+
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-10 text-center">
+              <History className="size-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">暂无测评记录，完成一次评估后将自动记录。</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>智能体版本</TableHead>
+                    <TableHead>测评模型</TableHead>
+                    <TableHead>测评时间</TableHead>
+                    <TableHead className="text-right">得分</TableHead>
+                    <TableHead className="text-right">通过率</TableHead>
+                    <TableHead className="text-right">用例数</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((h) => (
+                    <TableRow key={h.id}>
+                      <TableCell>
+                        <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
+                          <GitBranch className="size-3" />
+                          {h.version}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{h.model}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDateTime(h.evaluatedAt)}</TableCell>
+                      <TableCell className="text-right font-semibold text-foreground">{h.score}</TableCell>
+                      <TableCell className="text-right text-foreground">{h.passRate}%</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{h.caseCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )
