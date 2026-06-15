@@ -4,7 +4,7 @@ import { useRef, useState } from "react"
 import { ArrowUp, Mic, Paperclip, AtSign, Slash, Square, Lightbulb, Play, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { AGENTS } from "@/lib/mock-data"
+import { AGENTS, MCP_TOOLS } from "@/lib/mock-data"
 import type { Agent, AgentId } from "@/lib/types"
 
 type ChatMode = "planning" | "execution"
@@ -16,7 +16,7 @@ interface TokenUsage {
 }
 
 interface MentionState {
-  type: "agent" | "skill"
+  type: "mcp" | "skill"
   query: string
   tokenStart: number
 }
@@ -59,7 +59,7 @@ export function ChatComposer({
     const trigger = match[2]
     const query = match[3]
     const tokenStart = caret - query.length - 1
-    setMention({ type: trigger === "@" ? "agent" : "skill", query, tokenStart })
+    setMention({ type: trigger === "@" ? "mcp" : "skill", query, tokenStart })
   }
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -71,15 +71,10 @@ export function ChatComposer({
   function insertMention(label: string) {
     if (!mention) return
     const caret = (taRef.current?.selectionStart ?? value.length)
-    const next = value.slice(0, mention.tokenStart) + (mention.type === "agent" ? "@" : "/") + label + " " + value.slice(caret)
+    const next = value.slice(0, mention.tokenStart) + (mention.type === "mcp" ? "@" : "/") + label + " " + value.slice(caret)
     setValue(next)
     setMention(null)
     requestAnimationFrame(() => taRef.current?.focus())
-  }
-
-  function pickAgent(agent: Agent) {
-    onSelectAgent(agent.id)
-    insertMention(agent.name)
   }
 
   function submit() {
@@ -101,7 +96,9 @@ export function ChatComposer({
     }
   }
 
-  const filteredAgents = AGENTS.filter((a) => a.name.includes(mention?.query ?? ""))
+  const filteredMcpTools = MCP_TOOLS.filter(
+    (t) => t.name.includes(mention?.query ?? "") || t.description.includes(mention?.query ?? "") || (mention?.query ?? "") === "",
+  )
   const filteredSkills = skillSource.skills.filter(
     (s) => s.name.includes(mention?.query ?? "") || (mention?.query ?? "") === "",
   )
@@ -213,21 +210,25 @@ export function ChatComposer({
       {mention && (
         <div className="absolute bottom-full left-3 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
           <div className="flex items-center gap-1.5 border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground">
-            {mention.type === "agent" ? <AtSign className="size-3.5" /> : <Slash className="size-3.5" />}
-            {mention.type === "agent" ? "选择智能体" : `选择技能 · ${skillSource.name}`}
+            {mention.type === "mcp" ? <AtSign className="size-3.5" /> : <Slash className="size-3.5" />}
+            {mention.type === "mcp" ? "选择 MCP 工具" : `选择技能 · ${skillSource.name}`}
           </div>
           <ul className="max-h-60 overflow-y-auto p-1">
-            {mention.type === "agent"
-              ? filteredAgents.map((a) => (
-                  <li key={a.id}>
+            {mention.type === "mcp"
+              ? filteredMcpTools.map((t) => (
+                  <li key={t.id}>
                     <button
                       type="button"
-                      onClick={() => pickAgent(a)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent"
+                      onClick={() => insertMention(t.name)}
+                      className="flex w-full flex-col rounded-lg px-2 py-1.5 text-left hover:bg-accent"
                     >
-                      <img src={a.avatar || "/placeholder.svg"} alt="" className="size-6 rounded-full object-cover" />
-                      <span className="font-medium">{a.name}</span>
-                      <span className="ml-auto truncate text-xs text-muted-foreground">{a.tagline}</span>
+                      <span className="flex items-center gap-1.5 text-sm font-medium">
+                        @{t.name}
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                          {t.server}
+                        </span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">{t.description}</span>
                     </button>
                   </li>
                 ))
@@ -243,8 +244,8 @@ export function ChatComposer({
                     </button>
                   </li>
                 ))}
-            {mention.type === "agent" && filteredAgents.length === 0 && (
-              <li className="px-2 py-2 text-sm text-muted-foreground">无匹配智能体</li>
+            {mention.type === "mcp" && filteredMcpTools.length === 0 && (
+              <li className="px-2 py-2 text-sm text-muted-foreground">无匹配 MCP 工具</li>
             )}
           </ul>
         </div>
@@ -257,7 +258,7 @@ export function ChatComposer({
         onKeyDown={handleKeyDown}
         rows={2}
         placeholder={
-          selectedAgent ? `给 ${selectedAgent.name} 发送消息，输入 @ 切换智能体，/ 选择技能` : "请先选择一个智能体开始对话"
+          selectedAgent ? `给 ${selectedAgent.name} 发送消息，输入 @ 选择 MCP 工具，/ 选择技能` : "请先选择一个智能体开始对话"
         }
         className="block w-full resize-none rounded-t-2xl bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
       />

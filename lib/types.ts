@@ -6,6 +6,15 @@ export interface Skill {
   description: string
 }
 
+/** An MCP (Model Context Protocol) tool that can be invoked inline via @ */
+export interface McpTool {
+  id: string
+  name: string
+  description: string
+  /** the MCP server this tool belongs to */
+  server: string
+}
+
 export interface Agent {
   id: AgentId
   name: string

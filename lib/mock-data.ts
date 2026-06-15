@@ -360,7 +360,7 @@ export const AGENTS: Agent[] = [
     skills: [
       { id: "wellness", name: "健康科普", description: "健康知识普及" },
       { id: "fitness", name: "健身指导", description: "运动计划制定" },
-      { id: "nutrition", name: "营养���议", description: "饮食营养指导" },
+      { id: "nutrition", name: "营养�����议", description: "饮食营养指导" },
     ],
     updatedAt: now - day * 17,
   },
@@ -409,6 +409,19 @@ export const AGENTS: Agent[] = [
 export function getAgent(id: string | null | undefined): Agent | undefined {
   return AGENTS.find((a) => a.id === id)
 }
+
+/** MCP tools available to invoke inline via @ */
+export const MCP_TOOLS: McpTool[] = [
+  { id: "web-search", name: "web_search", description: "通过 MCP 联网检索实时信息", server: "search" },
+  { id: "fetch-url", name: "fetch_url", description: "抓取并解析网页内容", server: "search" },
+  { id: "filesystem", name: "read_file", description: "读取本地文件系统中的文件", server: "filesystem" },
+  { id: "write-file", name: "write_file", description: "写入或创建文件", server: "filesystem" },
+  { id: "github", name: "github_repo", description: "查询 GitHub 仓库、Issue 与 PR", server: "github" },
+  { id: "postgres", name: "sql_query", description: "在 Postgres 数据库中执行 SQL", server: "database" },
+  { id: "slack", name: "slack_message", description: "发送或读取 Slack 消息", server: "slack" },
+  { id: "notion", name: "notion_page", description: "读写 Notion 页面与数据库", server: "notion" },
+  { id: "browser", name: "browser_navigate", description: "在无头浏览器中自动化操作", server: "browser" },
+]
 
 const hour = 1000 * 60 * 60
 
