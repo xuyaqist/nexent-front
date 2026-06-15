@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Sparkles, ArrowUpRight, BookOpen, ChevronDown, ExternalLink, Globe, Library } from "lucide-react"
+import { Sparkles, ArrowUpRight, BookOpen, X, ExternalLink, Globe, Library } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Markdown } from "./markdown"
 import {
@@ -31,98 +31,138 @@ export function ChatThread({
   const sources = conversation.sources ?? []
   const validIds = new Set(sources.map((s) => s.id))
 
-  // citation panel state, lifted so inline [n] badges can drive it
+  // sidebar state, lifted so both the trigger and inline [n] badges can drive it
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [activeSourceId, setActiveSourceId] = useState<number | null>(null)
 
-  const handleCitationClick = (id: number) => {
-    setSourcesOpen(true)
+  const openSources = (id: number | null = null) => {
     setActiveSourceId(id)
+    setSourcesOpen(true)
   }
 
-  // only the most recent assistant message carries the current citations
+  // only the most recent assistant message carries the current citations + trigger
   const lastAssistantId = [...conversation.messages].reverse().find((m) => m.role === "assistant")?.id
+  const showSources = !isStreaming && sources.length > 0
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [conversation.messages, conversation.suggestions])
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6">
-      <div className="space-y-6">
-        {conversation.messages.map((m) =>
-          m.role === "user" ? (
-            <UserMessage key={m.id} message={m} />
-          ) : (
-            <AssistantMessage
-              key={m.id}
-              message={m}
-              onResolveHitl={onResolveHitl}
-              citations={
-                m.id === lastAssistantId && validIds.size > 0
-                  ? { validIds, onCitationClick: handleCitationClick }
-                  : undefined
-              }
-            />
-          ),
+    <>
+      <div className="mx-auto w-full max-w-3xl px-4 py-6">
+        <div className="space-y-6">
+          {conversation.messages.map((m) =>
+            m.role === "user" ? (
+              <UserMessage key={m.id} message={m} />
+            ) : (
+              <AssistantMessage
+                key={m.id}
+                message={m}
+                onResolveHitl={onResolveHitl}
+                citations={
+                  m.id === lastAssistantId && validIds.size > 0
+                    ? { validIds, onCitationClick: openSources }
+                    : undefined
+                }
+                sourcesTrigger={
+                  m.id === lastAssistantId && showSources
+                    ? { sources, onOpen: () => openSources(null) }
+                    : undefined
+                }
+              />
+            ),
+          )}
+        </div>
+
+        {/* follow-up suggestions */}
+        {!isStreaming && conversation.suggestions && conversation.suggestions.length > 0 && (
+          <div className="mt-6">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Sparkles className="size-3.5 text-primary" />
+              你可能还想问
+            </p>
+            <div className="flex flex-col gap-2">
+              {conversation.suggestions.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => onPickSuggestion(q)}
+                  className="group flex items-center gap-2 self-start rounded-full border border-primary/30 bg-primary/5 py-1.5 pl-4 pr-3 text-sm text-foreground transition-colors hover:bg-primary/10"
+                >
+                  {q}
+                  <ArrowUpRight className="size-3.5 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
+
+        <div ref={bottomRef} />
       </div>
 
-      {/* answer sources — surfaced above the follow-up suggestions */}
-      {!isStreaming && sources.length > 0 && (
-        <SourcesBlock
+      {/* sources sidebar drawer */}
+      {showSources && (
+        <SourcesSidebar
           sources={sources}
           open={sourcesOpen}
-          onToggle={() => setSourcesOpen((o) => !o)}
+          onClose={() => setSourcesOpen(false)}
           activeId={activeSourceId}
         />
       )}
-
-      {/* follow-up suggestions */}
-      {!isStreaming && conversation.suggestions && conversation.suggestions.length > 0 && (
-        <div className="mt-6">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Sparkles className="size-3.5 text-primary" />
-            你可能还想问
-          </p>
-          <div className="flex flex-col gap-2">
-            {conversation.suggestions.map((q) => (
-              <button
-                key={q}
-                type="button"
-                onClick={() => onPickSuggestion(q)}
-                className="group flex items-center gap-2 self-start rounded-full border border-primary/30 bg-primary/5 py-1.5 pl-4 pr-3 text-sm text-foreground transition-colors hover:bg-primary/10"
-              >
-                {q}
-                <ArrowUpRight className="size-3.5 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div ref={bottomRef} />
-    </div>
+    </>
   )
 }
 
-function SourcesBlock({
+/** Compact trigger aligned with the answer content. */
+function SourcesTrigger({ sources, onOpen }: { sources: Source[]; onOpen: () => void }) {
+  const webCount = sources.filter((s) => s.type === "web").length
+  const kbCount = sources.filter((s) => s.type === "knowledge").length
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 py-1 pl-2.5 pr-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+    >
+      <BookOpen className="size-3.5 text-primary" />
+      <span>查看信息来源</span>
+      <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+        {sources.length}
+      </span>
+      {webCount > 0 && (
+        <span className="flex items-center gap-0.5">
+          <Globe className="size-3" />
+          {webCount}
+        </span>
+      )}
+      {kbCount > 0 && (
+        <span className="flex items-center gap-0.5">
+          <Library className="size-3" />
+          {kbCount}
+        </span>
+      )}
+    </button>
+  )
+}
+
+/** Right-side drawer listing all cited sources. */
+function SourcesSidebar({
   sources,
   open,
-  onToggle,
+  onClose,
   activeId,
 }: {
   sources: Source[]
   open: boolean
-  onToggle: () => void
+  onClose: () => void
   activeId: number | null
 }) {
   const itemRefs = useRef<Record<number, HTMLLIElement | null>>({})
 
-  // scroll the cited source into view + briefly highlight when activated
+  // scroll the cited source into view + highlight when activated
   useEffect(() => {
     if (open && activeId != null) {
-      itemRefs.current[activeId]?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      itemRefs.current[activeId]?.scrollIntoView({ behavior: "smooth", block: "center" })
     }
   }, [open, activeId])
 
@@ -130,35 +170,56 @@ function SourcesBlock({
   const kbCount = sources.filter((s) => s.type === "knowledge").length
 
   return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-border bg-muted/30">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+    <>
+      {/* backdrop */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-foreground/20 transition-opacity",
+          open ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* drawer */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border bg-background shadow-xl transition-transform duration-300",
+          open ? "translate-x-0" : "translate-x-full",
+        )}
+        aria-label="信息来源"
       >
-        <BookOpen className="size-4 text-primary" />
-        <span>查看信息来源</span>
-        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-          {sources.length}
-        </span>
-        <span className="ml-1 hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
-          {webCount > 0 && (
-            <span className="flex items-center gap-1">
-              <Globe className="size-3" />
-              网页 {webCount}
-            </span>
-          )}
-          {kbCount > 0 && (
-            <span className="flex items-center gap-1">
-              <Library className="size-3" />
-              知识库 {kbCount}
-            </span>
-          )}
-        </span>
-        <ChevronDown className={cn("ml-auto size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <ul className="space-y-2 border-t border-border p-3">
+        <header className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
+          <BookOpen className="size-4 text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">信息来源</h3>
+          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+            {sources.length}
+          </span>
+          <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+            {webCount > 0 && (
+              <span className="flex items-center gap-1">
+                <Globe className="size-3" />
+                网页 {webCount}
+              </span>
+            )}
+            {kbCount > 0 && (
+              <span className="flex items-center gap-1">
+                <Library className="size-3" />
+                知识库 {kbCount}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="关闭"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <ul className="flex-1 space-y-2.5 overflow-y-auto p-4">
           {sources.map((s) => {
             const isWeb = s.type === "web"
             const Icon = isWeb ? Globe : Library
@@ -167,8 +228,8 @@ function SourcesBlock({
               <>
                 <span
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold",
-                    active ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground",
+                    "flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold",
+                    active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                   )}
                 >
                   {s.id}
@@ -179,8 +240,8 @@ function SourcesBlock({
                     <span className="truncate text-sm font-medium text-foreground">{s.title}</span>
                     {isWeb && <ExternalLink className="size-3 shrink-0 text-muted-foreground" />}
                   </div>
-                  {s.snippet && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{s.snippet}</p>}
-                  <span className="mt-1 inline-block text-[11px] text-muted-foreground/70">
+                  {s.snippet && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{s.snippet}</p>}
+                  <span className="mt-1.5 inline-block break-all text-[11px] text-muted-foreground/70">
                     {isWeb ? s.url : `知识库 · ${s.collection ?? ""}`}
                   </span>
                 </div>
@@ -199,8 +260,8 @@ function SourcesBlock({
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "flex items-start gap-2 rounded-lg border p-2.5 transition-colors",
-                      active ? "border-primary/50 bg-primary/5" : "border-border bg-background hover:bg-muted/50",
+                      "flex items-start gap-2.5 rounded-lg border p-3 transition-colors",
+                      active ? "border-primary/50 bg-primary/5" : "border-border bg-card hover:bg-muted/50",
                     )}
                   >
                     {body}
@@ -208,8 +269,8 @@ function SourcesBlock({
                 ) : (
                   <div
                     className={cn(
-                      "flex items-start gap-2 rounded-lg border p-2.5",
-                      active ? "border-primary/50 bg-primary/5" : "border-border bg-background",
+                      "flex items-start gap-2.5 rounded-lg border p-3",
+                      active ? "border-primary/50 bg-primary/5" : "border-border bg-card",
                     )}
                   >
                     {body}
@@ -219,8 +280,8 @@ function SourcesBlock({
             )
           })}
         </ul>
-      )}
-    </div>
+      </aside>
+    </>
   )
 }
 
@@ -239,10 +300,12 @@ function AssistantMessage({
   message,
   onResolveHitl,
   citations,
+  sourcesTrigger,
 }: {
   message: ChatMessage
   onResolveHitl: (msgId: string, approved: boolean) => void
   citations?: { validIds: Set<number>; onCitationClick: (id: number) => void }
+  sourcesTrigger?: { sources: Source[]; onOpen: () => void }
 }) {
   const agent = getAgent(message.agentId)
   const empty = message.parts.length === 0
@@ -280,6 +343,12 @@ function AssistantMessage({
               return null
           }
         })}
+
+        {sourcesTrigger && (
+          <div className="pt-1">
+            <SourcesTrigger sources={sourcesTrigger.sources} onOpen={sourcesTrigger.onOpen} />
+          </div>
+        )}
       </div>
     </div>
   )
