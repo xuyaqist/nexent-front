@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Sparkles, ArrowUpRight, BookOpen, ChevronDown, Database, FileText, Globe, Brain } from "lucide-react"
+import { Sparkles, ArrowUpRight, BookOpen, ChevronDown, ExternalLink, Globe, Library } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Markdown } from "./markdown"
 import {
@@ -12,7 +12,7 @@ import {
 } from "./message-parts"
 import { Spinner } from "@/components/ui/spinner"
 import { getAgent } from "@/lib/mock-data"
-import type { ChatMessage, Conversation } from "@/lib/types"
+import type { ChatMessage, Conversation, Source } from "@/lib/types"
 
 export function ChatThread({
   conversation,
@@ -27,10 +27,21 @@ export function ChatThread({
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // sources retrieved for the latest answer (surfaced from the context display)
-  const sources = (conversation.context ?? [])
-    .filter((c) => c.kind === "source")
-    .map((c) => c.value)
+  // structured sources backing the latest answer (referenced inline as [n])
+  const sources = conversation.sources ?? []
+  const validIds = new Set(sources.map((s) => s.id))
+
+  // citation panel state, lifted so inline [n] badges can drive it
+  const [sourcesOpen, setSourcesOpen] = useState(false)
+  const [activeSourceId, setActiveSourceId] = useState<number | null>(null)
+
+  const handleCitationClick = (id: number) => {
+    setSourcesOpen(true)
+    setActiveSourceId(id)
+  }
+
+  // only the most recent assistant message carries the current citations
+  const lastAssistantId = [...conversation.messages].reverse().find((m) => m.role === "assistant")?.id
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -43,13 +54,29 @@ export function ChatThread({
           m.role === "user" ? (
             <UserMessage key={m.id} message={m} />
           ) : (
-            <AssistantMessage key={m.id} message={m} onResolveHitl={onResolveHitl} />
+            <AssistantMessage
+              key={m.id}
+              message={m}
+              onResolveHitl={onResolveHitl}
+              citations={
+                m.id === lastAssistantId && validIds.size > 0
+                  ? { validIds, onCitationClick: handleCitationClick }
+                  : undefined
+              }
+            />
           ),
         )}
       </div>
 
       {/* answer sources — surfaced above the follow-up suggestions */}
-      {!isStreaming && sources.length > 0 && <SourcesBlock sources={sources} />}
+      {!isStreaming && sources.length > 0 && (
+        <SourcesBlock
+          sources={sources}
+          open={sourcesOpen}
+          onToggle={() => setSourcesOpen((o) => !o)}
+          activeId={activeSourceId}
+        />
+      )}
 
       {/* follow-up suggestions */}
       {!isStreaming && conversation.suggestions && conversation.suggestions.length > 0 && (
@@ -79,22 +106,34 @@ export function ChatThread({
   )
 }
 
-function sourceIcon(value: string) {
-  const v = value.toLowerCase()
-  if (v.includes("数据表") || v.includes("table") || v.includes("看板") || v.includes("sql")) return Database
-  if (v.includes("文档") || v.includes("白皮书") || v.includes("doc") || v.includes("arxiv")) return FileText
-  if (v.includes("检索") || v.includes("search") || v.includes("web") || v.includes("官方")) return Globe
-  if (v.includes("历史") || v.includes("上下文") || v.includes("memory")) return Brain
-  return BookOpen
-}
+function SourcesBlock({
+  sources,
+  open,
+  onToggle,
+  activeId,
+}: {
+  sources: Source[]
+  open: boolean
+  onToggle: () => void
+  activeId: number | null
+}) {
+  const itemRefs = useRef<Record<number, HTMLLIElement | null>>({})
 
-function SourcesBlock({ sources }: { sources: string[] }) {
-  const [open, setOpen] = useState(false)
+  // scroll the cited source into view + briefly highlight when activated
+  useEffect(() => {
+    if (open && activeId != null) {
+      itemRefs.current[activeId]?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [open, activeId])
+
+  const webCount = sources.filter((s) => s.type === "web").length
+  const kbCount = sources.filter((s) => s.type === "knowledge").length
+
   return (
     <div className="mt-6 overflow-hidden rounded-xl border border-border bg-muted/30">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={onToggle}
         className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
       >
         <BookOpen className="size-4 text-primary" />
@@ -102,19 +141,80 @@ function SourcesBlock({ sources }: { sources: string[] }) {
         <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
           {sources.length}
         </span>
+        <span className="ml-1 hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
+          {webCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Globe className="size-3" />
+              网页 {webCount}
+            </span>
+          )}
+          {kbCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Library className="size-3" />
+              知识库 {kbCount}
+            </span>
+          )}
+        </span>
         <ChevronDown className={cn("ml-auto size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <ul className="space-y-1.5 border-t border-border px-3 py-2.5">
-          {sources.map((s, i) => {
-            const Icon = sourceIcon(s)
-            return (
-              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-background text-[11px] font-medium text-muted-foreground">
-                  {i + 1}
+        <ul className="space-y-2 border-t border-border p-3">
+          {sources.map((s) => {
+            const isWeb = s.type === "web"
+            const Icon = isWeb ? Globe : Library
+            const active = activeId === s.id
+            const body = (
+              <>
+                <span
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold",
+                    active ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground",
+                  )}
+                >
+                  {s.id}
                 </span>
-                <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <span className="text-foreground">{s}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-sm font-medium text-foreground">{s.title}</span>
+                    {isWeb && <ExternalLink className="size-3 shrink-0 text-muted-foreground" />}
+                  </div>
+                  {s.snippet && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{s.snippet}</p>}
+                  <span className="mt-1 inline-block text-[11px] text-muted-foreground/70">
+                    {isWeb ? s.url : `知识库 · ${s.collection ?? ""}`}
+                  </span>
+                </div>
+              </>
+            )
+            return (
+              <li
+                key={s.id}
+                ref={(el) => {
+                  itemRefs.current[s.id] = el
+                }}
+              >
+                {isWeb && s.url ? (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-start gap-2 rounded-lg border p-2.5 transition-colors",
+                      active ? "border-primary/50 bg-primary/5" : "border-border bg-background hover:bg-muted/50",
+                    )}
+                  >
+                    {body}
+                  </a>
+                ) : (
+                  <div
+                    className={cn(
+                      "flex items-start gap-2 rounded-lg border p-2.5",
+                      active ? "border-primary/50 bg-primary/5" : "border-border bg-background",
+                    )}
+                  >
+                    {body}
+                  </div>
+                )}
               </li>
             )
           })}
@@ -138,9 +238,11 @@ function UserMessage({ message }: { message: ChatMessage }) {
 function AssistantMessage({
   message,
   onResolveHitl,
+  citations,
 }: {
   message: ChatMessage
   onResolveHitl: (msgId: string, approved: boolean) => void
+  citations?: { validIds: Set<number>; onCitationClick: (id: number) => void }
 }) {
   const agent = getAgent(message.agentId)
   const empty = message.parts.length === 0
@@ -173,7 +275,7 @@ function AssistantMessage({
             case "hitl":
               return <HitlBlock key={i} part={part} onResolve={(a) => onResolveHitl(message.id, a)} />
             case "text":
-              return <Markdown key={i} text={part.text} />
+              return <Markdown key={i} text={part.text} citations={citations} />
             default:
               return null
           }

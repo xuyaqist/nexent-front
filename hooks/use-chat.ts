@@ -204,7 +204,12 @@ export function useChat() {
         { id: uid("ctx"), kind: "agent", label: "当前智能体", value: agent?.name ?? "智能体" },
         { id: uid("ctx"), kind: "request", label: "本轮请求", value: trimmed },
         ...scenario.tools.map((t) => ({ id: uid("ctx"), kind: "tool" as const, label: "工具", value: t.name })),
-        ...(scenario.sources ?? []).map((s) => ({ id: uid("ctx"), kind: "source" as const, label: "来源", value: s })),
+        ...(scenario.sources ?? []).map((s) => ({
+          id: uid("ctx"),
+          kind: "source" as const,
+          label: s.type === "web" ? "网页来源" : "知识库来源",
+          value: s.title,
+        })),
       ]
 
       patchConversation(cid, (c) => ({
@@ -212,6 +217,7 @@ export function useChat() {
         title: c.messages.length === 0 ? trimmed.slice(0, 16) : c.title,
         agentId,
         suggestions: undefined,
+        sources: undefined,
         updatedAt: Date.now(),
         taskStatus: "running",
         plan: planMeta,
@@ -322,6 +328,7 @@ export function useChat() {
         patchConversation(cid, (c) => ({
           ...c,
           suggestions: scenario.suggestions,
+          sources: scenario.sources,
           taskStatus: "done",
           updatedAt: Date.now(),
         }))

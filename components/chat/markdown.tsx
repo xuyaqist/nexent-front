@@ -1,8 +1,15 @@
 import { Fragment } from "react"
 
-/** Renders **bold** inside a line of plain text. */
-function renderInline(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+interface CitationOptions {
+  /** valid citation ids that can be referenced inline as [n] */
+  validIds?: Set<number>
+  /** called when a citation badge is clicked */
+  onCitationClick?: (id: number) => void
+}
+
+/** Renders **bold**, `code`, and [n] citation markers inside a line of text. */
+function renderInline(text: string, citations?: CitationOptions) {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[\d+\])/g)
   return parts.map((p, i) => {
     if (p.startsWith("**") && p.endsWith("**")) {
       return (
@@ -18,15 +25,33 @@ function renderInline(text: string) {
         </code>
       )
     }
+    // citation marker like [1]
+    const cite = p.match(/^\[(\d+)\]$/)
+    if (cite) {
+      const id = Number(cite[1])
+      if (!citations?.validIds || citations.validIds.has(id)) {
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => citations?.onCitationClick?.(id)}
+            className="mx-0.5 inline-flex h-4 min-w-4 translate-y-[-1px] items-center justify-center rounded-[4px] bg-primary/10 px-1 align-middle text-[10px] font-semibold leading-none text-primary transition-colors hover:bg-primary/20"
+            aria-label={`查看来源 ${id}`}
+          >
+            {id}
+          </button>
+        )
+      }
+    }
     return <Fragment key={i}>{p}</Fragment>
   })
 }
 
 /**
  * Minimal markdown renderer good enough for the demo: paragraphs, bold,
- * inline code, fenced code blocks and "- " bullet lists.
+ * inline code, fenced code blocks, "- " bullet lists, and [n] citations.
  */
-export function Markdown({ text }: { text: string }) {
+export function Markdown({ text, citations }: { text: string; citations?: CitationOptions }) {
   const blocks = text.split(/```/)
   return (
     <div className="space-y-3 text-sm leading-relaxed text-foreground">
@@ -52,7 +77,7 @@ export function Markdown({ text }: { text: string }) {
             elements.push(
               <ul key={key} className="list-disc space-y-1 pl-5">
                 {list.map((li, i) => (
-                  <li key={i}>{renderInline(li)}</li>
+                  <li key={i}>{renderInline(li, citations)}</li>
                 ))}
               </ul>,
             )
@@ -65,7 +90,7 @@ export function Markdown({ text }: { text: string }) {
             list.push(bullet[1])
           } else {
             flushList(`ul-${bi}-${li}`)
-            if (line.trim()) elements.push(<p key={`p-${bi}-${li}`}>{renderInline(line)}</p>)
+            if (line.trim()) elements.push(<p key={`p-${bi}-${li}`}>{renderInline(line, citations)}</p>)
           }
         })
         flushList(`ul-${bi}-end`)

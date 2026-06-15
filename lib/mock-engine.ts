@@ -1,4 +1,4 @@
-import type { AgentId, HitlPart, PlanPart, ToolPart, TokenUsage } from "./types"
+import type { AgentId, HitlPart, PlanPart, Source, ToolPart, TokenUsage } from "./types"
 
 export interface Scenario {
   reasoning: string
@@ -8,8 +8,8 @@ export interface Scenario {
   answer: string
   usage: TokenUsage
   suggestions: string[]
-  /** retrieved knowledge / references surfaced in the context display */
-  sources?: string[]
+  /** cited sources backing the answer, referenced inline as [n] */
+  sources?: Source[]
 }
 
 function estimateTokens(text: string): number {
@@ -26,7 +26,7 @@ export function buildScenario(agentId: AgentId | null, userText: string): Scenar
 
   if (agentId === "data") {
     const answer =
-      "根据导入的数据集，最近 30 天活跃用户从 12,400 增长到 18,900，整体增幅约 **52%**。增长主要集中在第 3 周（新版本上线后），周留存率从 38% 提升到 45%。\n\n建议关注：渠道 A 的获客成本偏高，转化漏斗在「注册→首次使用」环节流失最严重（约 41%）。"
+      "根据导入的数据集，最近 30 天活跃用户从 12,400 增长到 18,900，整体增幅约 **52%**[1]。增长主要集中在第 3 周（新版本上线后），周留存率从 38% 提升到 45%[3]。\n\n建议关注：渠道 A 的获客成本偏高，转化漏斗在「注册→首次使用」环节流失最严重（约 41%）[2]。"
     return {
       reasoning:
         "用户想分析用户增长趋势。我需要：1) 确认数据时间范围；2) 计算环比增幅与留存；3) 定位增长来源；4) 检查是否存在异常值。先拉取数据，再分阶段统计，最后判断哪些结论需要人工确认后再生成报告。",
@@ -60,13 +60,35 @@ export function buildScenario(agentId: AgentId | null, userText: string): Scenar
       answer,
       usage: { prompt: promptTokens, completion: estimateTokens(answer), total: promptTokens + estimateTokens(answer) },
       suggestions: ["渠道 A 的获客成本为什么偏高？", "帮我优化注册到首次使用的转化漏斗", "预测下个月的活跃用户数"],
-      sources: ["events 数据表（近 30 天）", "渠道归因表 channel_attribution", "留存看板 retention_daily"],
+      sources: [
+        {
+          id: 1,
+          type: "knowledge",
+          title: "events 数据表（近 30 天）",
+          collection: "业务数据库",
+          snippet: "active_users 字段记录每日活跃用户，区间 [12,400, 18,900]，环比增幅约 52%。",
+        },
+        {
+          id: 2,
+          type: "knowledge",
+          title: "渠道归因表 channel_attribution",
+          collection: "业务数据库",
+          snippet: "渠道 A 的 CAC 为 ¥86，高于均值 ¥52；注册→首次使用流失率约 41%。",
+        },
+        {
+          id: 3,
+          type: "knowledge",
+          title: "留存看板 retention_daily",
+          collection: "业务数据库",
+          snippet: "新版本上线后第 3 周周留存率由 38% 提升至 45%。",
+        },
+      ],
     }
   }
 
   if (agentId === "research") {
     const answer =
-      "综合多个来源，2026 年主流的 AI Agent 架构大致可分为三类：\n\n1. **规划-执行型（Planner-Executor）**：先生成策略计划再分步执行，适合长任务，可在中途修订计划。\n2. **ReAct 推理-行动型**：推理与工具调用交替进行，反应灵活但长程一致性较弱。\n3. **多智能体协作型**：由编排器调度多个专精子智能体协同完成任务。\n\n趋势上，三者正在融合：以规划为骨架、ReAct 为执行循环、并按需派生子智能体。"
+      "综合多个来源，2026 年主流的 AI Agent 架构大致可分为三类：\n\n1. **规划-执行型（Planner-Executor）**：先生成策略计划再分步执行，适合长任务，可在中途修订计划[1]。\n2. **ReAct 推理-行动型**：推理与工具调用交替进行，反应灵活但长程一致性较弱[2]。\n3. **多智能体协作型**：由编排器调度多个专精子智能体协同完成任务[3]。\n\n趋势上，三者正在融合：以规划为骨架、ReAct 为执行循环、并按需派生子智能体[1][3]。"
     return {
       reasoning:
         "这是一个调研类问题，需要多轮检索并交叉验证。先拆解为「架构分类」「代表实现」「发展趋势」三个子问题，分别检索权威来源，标注引用，最后归纳成结构化综述。检索量较大，先列计划。",
@@ -93,7 +115,29 @@ export function buildScenario(agentId: AgentId | null, userText: string): Scenar
       answer,
       usage: { prompt: promptTokens, completion: estimateTokens(answer), total: promptTokens + estimateTokens(answer) },
       suggestions: ["展开讲讲多智能体协作的编排策略", "这三类架构各自的代表开源项目有哪些？", "帮我整理成一页幻灯片大纲"],
-      sources: ["arXiv: Agent Architectures Survey 2026", "LangGraph 官方文档", "AutoGen 多智能体白皮书"],
+      sources: [
+        {
+          id: 1,
+          type: "web",
+          title: "Agent Architectures Survey 2026 — arXiv",
+          url: "https://arxiv.org/abs/2601.01234",
+          snippet: "提出以规划为骨架、ReAct 为执行循环的混合架构，并支持中途修订策略计划。",
+        },
+        {
+          id: 2,
+          type: "web",
+          title: "ReAct: Synergizing Reasoning and Acting — LangGraph 官方文档",
+          url: "https://langchain-ai.github.io/langgraph/concepts/react/",
+          snippet: "推理与工具调用交替进行，反应灵活，但在长程任务中一致性较弱。",
+        },
+        {
+          id: 3,
+          type: "web",
+          title: "AutoGen 多智能体协作白皮书",
+          url: "https://microsoft.github.io/autogen/",
+          snippet: "由编排器调度多个专精子智能体协同完成复杂任务，可按需派生新角色。",
+        },
+      ],
     }
   }
 
@@ -121,7 +165,7 @@ export function buildScenario(agentId: AgentId | null, userText: string): Scenar
 
   // general agent
   const answer =
-    "好的，我来帮你处理这个问题。\n\n我先梳理了任务目标，制定了执行计划，并调用了检索工具收集相关信息。综合来看，关键结论如下：\n\n- 核心要点已经过多源交叉验证，可信度较高；\n- 部分操作涉及外部副作用，已请你确认；\n- 如需更深入的分析，我可以进一步展开。\n\n还有什么需要我补充的吗？"
+    "好的，我来帮你处理这个问题。\n\n我先梳理了任务目标，制定了执行计划，并调用了检索工具收集相关信息。综合来看，关键结论如下：\n\n- 核心要点已经过多源交叉验证，可信度较高[1]；\n- 部分操作涉及外部副作用，已请你确认[2]；\n- 如需更深入的分析，我可以进一步展开。\n\n还有什么需要我补充的吗？"
   return {
     reasoning:
       "先理解用户意图，判断是否需要外部工具。这里需要检索信息并可能产生副作用，因此先制定计划，执行检索，遇到需要授权的动作时暂停等待用户确认，最后汇总回答。",
@@ -154,7 +198,22 @@ export function buildScenario(agentId: AgentId | null, userText: string): Scenar
     answer,
     usage: { prompt: promptTokens, completion: estimateTokens(answer), total: promptTokens + estimateTokens(answer) },
     suggestions: ["把上面的结论整理成要点清单", "这个结论的信息来源是什么？", "换一个角度再分析一下"],
-    sources: ["web_search 检索摘要（6 条）", "对话历史上下文"],
+    sources: [
+      {
+        id: 1,
+        type: "web",
+        title: "web_search 检索摘要（6 条相关结果）",
+        url: "https://www.google.com/search?q=" + encodeURIComponent(userText.slice(0, 40)),
+        snippet: "对检索到的 6 条相关结果进行去重与摘要，关键结论在多个来源间一致。",
+      },
+      {
+        id: 2,
+        type: "knowledge",
+        title: "对话历史上下文",
+        collection: "会话记忆",
+        snippet: "结合本次会话中先前的目标与约束，判断该操作涉及外部副作用，需人工确认。",
+      },
+    ],
   }
 }
 
