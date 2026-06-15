@@ -71,15 +71,17 @@ export function TaskPanelInline({ conversation }: { conversation: Conversation }
         />
       </button>
 
-      {/* progress bar — always visible */}
-      <div className="px-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
-            style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}
-          />
+      {/* progress bar — hidden when task is complete and panel is collapsed */}
+      {!(isComplete && !expanded) && (
+        <div className={cn("px-3", !expanded && "pb-2.5")}>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* step list — collapsible */}
       {expanded && (
