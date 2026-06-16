@@ -1,13 +1,33 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ArrowUp, Mic, Paperclip, AtSign, Slash, Square, Lightbulb, Play, Zap } from "lucide-react"
+import { ArrowUp, Mic, Paperclip, AtSign, Slash, Square, Lightbulb, Play, Zap, ChevronDown, Check, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { AGENTS, MCP_TOOLS } from "@/lib/mock-data"
 import type { Agent, AgentId } from "@/lib/types"
 
 type ChatMode = "planning" | "execution"
+
+interface ModelOption {
+  id: string
+  name: string
+  provider: string
+}
+
+const MODELS: ModelOption[] = [
+  { id: "gpt-5", name: "GPT-5", provider: "OpenAI" },
+  { id: "claude-opus-4.6", name: "Claude Opus 4.6", provider: "Anthropic" },
+  { id: "gemini-3-flash", name: "Gemini 3 Flash", provider: "Google" },
+  { id: "deepseek-v3", name: "DeepSeek V3", provider: "DeepSeek" },
+  { id: "qwen-max", name: "Qwen Max", provider: "Alibaba" },
+]
 
 interface TokenUsage {
   prompt: number
@@ -45,6 +65,7 @@ export function ChatComposer({
   const [value, setValue] = useState("")
   const [mention, setMention] = useState<MentionState | null>(null)
   const [tokenExpanded, setTokenExpanded] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(MODELS[0])
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const skillSource = selectedAgent ?? AGENTS[0]
@@ -264,6 +285,36 @@ export function ChatComposer({
       />
 
       <div className="flex items-center gap-2 px-3 pb-3 pt-1">
+        {/* Model selector (bottom-left) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Sparkles className="size-3.5 text-primary" />
+              <span className="font-medium text-foreground">{selectedModel.name}</span>
+              <ChevronDown className="size-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            {MODELS.map((m) => (
+              <DropdownMenuItem
+                key={m.id}
+                onClick={() => setSelectedModel(m)}
+                className="flex items-center gap-2"
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{m.name}</span>
+                  <span className="text-xs text-muted-foreground">{m.provider}</span>
+                </div>
+                {selectedModel.id === m.id && <Check className="ml-auto size-4 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <div className="ml-auto flex items-center gap-1">
           <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label="语音输入">
             <Mic className="size-5" />
