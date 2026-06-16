@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -107,108 +108,125 @@ export function AgentCapabilityPanel({ selectedTools, selectedSkills, onToggleTo
         </button>
       </div>
 
-      <div className="mb-4 flex items-center justify-end gap-4 text-sm">
-        <button className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700">
-          <RefreshCw className="size-3.5" />
-          刷新工具
-        </button>
-        <button className="flex items-center gap-1 text-primary hover:text-primary/80">
-          <Settings2 className="size-3.5" />
-          MCP配置
-        </button>
-      </div>
-
-      {/* 已选择工具 */}
-      <div className="mb-5 border-t border-border pt-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-            已选择工具
-            <Lightbulb className="size-3.5 text-amber-500" />
-            <span className="text-xs text-muted-foreground">({selectedTools.length})</span>
-          </span>
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setToolDialogOpen(true)}>
-            <Wrench className="size-3.5" />
-            选择工具
-          </Button>
-        </div>
-        {selectedTools.length > 0 ? (
-          <div className="space-y-3">
-            {groupedTools.map((group) => (
-              <div key={group.category}>
-                <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  {group.category}（{group.items.length}）
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {group.items.map((tool) => (
-                    <Badge key={tool} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1.5">
-                      {tool}
-                      <button
-                        onClick={() => onToggleTool(tool)}
-                        className="flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
-                        aria-label={`移除 ${tool}`}
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
-            暂未选择工具，点击「选择工具」添加
-          </div>
-        )}
-      </div>
-
-      {/* 已选择技能 */}
+      {/* 能力配置 Tab（工具 / 技能，后续可扩展记忆等） */}
       <div className="border-t border-border pt-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-            已选择技能
-            <Zap className="size-3.5 text-primary" />
-            <span className="text-xs text-muted-foreground">({selectedSkills.length})</span>
-          </span>
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSkillDialogOpen(true)}>
-            <Zap className="size-3.5" />
-            选择技能
-          </Button>
-        </div>
-        {selectedSkills.length > 0 ? (
-          <div className="space-y-3">
-            {groupedSkills.map((group) => (
-              <div key={group.category}>
-                <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  {group.category}（{group.items.length}）
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {group.items.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant="outline"
-                      className="gap-1 border-primary/30 py-1 pl-2.5 pr-1.5 text-primary"
-                      title={findSkillDesc(skill)}
-                    >
-                      {skill}
-                      <button
-                        onClick={() => onToggleSkill(skill)}
-                        className="flex size-4 items-center justify-center rounded-full transition-colors hover:bg-primary/10"
-                        aria-label={`移除 ${skill}`}
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
+        <Tabs defaultValue="tools">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="tools" className="gap-1.5">
+              <Wrench className="size-3.5" />
+              工具
+              <span className="text-xs text-muted-foreground">({selectedTools.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="skills" className="gap-1.5">
+              <Zap className="size-3.5" />
+              技能
+              <span className="text-xs text-muted-foreground">({selectedSkills.length})</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* 工具 Tab */}
+          <TabsContent value="tools" className="mt-4">
+            <div className="mb-4 flex items-center justify-end gap-4 text-sm">
+              <button className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700">
+                <RefreshCw className="size-3.5" />
+                刷新工具
+              </button>
+              <button className="flex items-center gap-1 text-primary hover:text-primary/80">
+                <Settings2 className="size-3.5" />
+                MCP配置
+              </button>
+            </div>
+            <div className="mb-3 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                已选择工具
+                <Lightbulb className="size-3.5 text-amber-500" />
+                <span className="text-xs text-muted-foreground">({selectedTools.length})</span>
+              </span>
+              <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setToolDialogOpen(true)}>
+                <Wrench className="size-3.5" />
+                选择工具
+              </Button>
+            </div>
+            {selectedTools.length > 0 ? (
+              <div className="space-y-3">
+                {groupedTools.map((group) => (
+                  <div key={group.category}>
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">
+                      {group.category}（{group.items.length}）
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {group.items.map((tool) => (
+                        <Badge key={tool} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1.5">
+                          {tool}
+                          <button
+                            onClick={() => onToggleTool(tool)}
+                            className="flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
+                            aria-label={`移除 ${tool}`}
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
-            暂未选择技能，点击「选择技能」添加
-          </div>
-        )}
+            ) : (
+              <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
+                暂未选择工具，点击「选择工具」添加
+              </div>
+            )}
+          </TabsContent>
+
+          {/* 技能 Tab */}
+          <TabsContent value="skills" className="mt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                已选择技能
+                <Zap className="size-3.5 text-primary" />
+                <span className="text-xs text-muted-foreground">({selectedSkills.length})</span>
+              </span>
+              <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSkillDialogOpen(true)}>
+                <Zap className="size-3.5" />
+                选择技能
+              </Button>
+            </div>
+            {selectedSkills.length > 0 ? (
+              <div className="space-y-3">
+                {groupedSkills.map((group) => (
+                  <div key={group.category}>
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">
+                      {group.category}（{group.items.length}）
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {group.items.map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="outline"
+                          className="gap-1 border-primary/30 py-1 pl-2.5 pr-1.5 text-primary"
+                          title={findSkillDesc(skill)}
+                        >
+                          {skill}
+                          <button
+                            onClick={() => onToggleSkill(skill)}
+                            className="flex size-4 items-center justify-center rounded-full transition-colors hover:bg-primary/10"
+                            aria-label={`移除 ${skill}`}
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
+                暂未选择技能，点击「选择技能」添加
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* 选择工具弹窗 */}
