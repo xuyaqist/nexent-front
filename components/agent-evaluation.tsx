@@ -173,7 +173,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const [history, setHistory] = useState<EvalHistory[]>(() => buildMockHistory(agent))
 
   // 分页：测评历史
-  const HISTORY_PAGE_SIZE = 5
+  const HISTORY_PAGE_SIZE = 4
   const [historyPage, setHistoryPage] = useState(1)
 
   // 下载 CSV 模板（Excel 可直接打开）
@@ -453,7 +453,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
             </div>
           ) : (
             <>
-              <div className="flex-1 space-y-3">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
                 {pagedHistory.map((h) => (
                   <div key={h.id} className="rounded-lg border border-border p-3">
                     <div className="flex items-center justify-between gap-2">
