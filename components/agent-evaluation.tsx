@@ -173,7 +173,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const [history, setHistory] = useState<EvalHistory[]>(() => buildMockHistory(agent))
 
   // 分页：测评历史
-  const HISTORY_PAGE_SIZE = 4
+  const HISTORY_PAGE_SIZE = 3
   const [historyPage, setHistoryPage] = useState(1)
 
   // 下载 CSV 模板（Excel 可直接打开）
