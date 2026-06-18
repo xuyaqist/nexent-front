@@ -14,6 +14,11 @@ import {
   Cpu,
   GitBranch,
   History,
+  FolderOpen,
+  Trash2,
+  Check,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import type { Agent } from "@/lib/types"
 import { MODELS } from "@/lib/types"
@@ -26,7 +31,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface AgentEvaluationProps {
   agent: Agent
@@ -45,7 +56,7 @@ interface EvalCase {
   reason: string
 }
 
-// 测评版本历史记录
+// 测评历史记录
 interface EvalHistory {
   id: string
   version: string
@@ -56,6 +67,15 @@ interface EvalHistory {
   fileName: string
   fileSize: number
   evaluatedAt: string
+}
+
+// 已上传的测试用例集（测试用例库）
+interface TestCaseFile {
+  id: string
+  name: string
+  size: number
+  caseCount: number
+  uploadedAt: string
 }
 
 // CSV 模板列
@@ -104,6 +124,26 @@ function buildMockHistory(agent: Agent): EvalHistory[] {
       fileName: b.fileName,
       fileSize: b.fileSize,
       evaluatedAt: d.toISOString(),
+    }
+  })
+}
+
+// 预置的已上传测试用例库
+function buildMockTestCases(): TestCaseFile[] {
+  const base = [
+    { daysAgo: 2, name: "销售场景测试集_v3.xlsx", size: 24576, caseCount: 18 },
+    { daysAgo: 7, name: "回归测试集.csv", size: 12800, caseCount: 12 },
+    { daysAgo: 15, name: "冒烟测试集.csv", size: 8192, caseCount: 6 },
+  ]
+  return base.map((b, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - b.daysAgo)
+    return {
+      id: `tc_${i}`,
+      name: b.name,
+      size: b.size,
+      caseCount: b.caseCount,
+      uploadedAt: d.toISOString(),
     }
   })
 }
@@ -169,8 +209,12 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const [evalModel, setEvalModel] = useState<string>(MODELS[0])
   const [evalVersion, setEvalVersion] = useState<string>(versionOptions[0])
 
-  // 测评版本历史
+  // 测评历史
   const [history, setHistory] = useState<EvalHistory[]>(() => buildMockHistory(agent))
+
+  // 测试用例库 + 库模态框
+  const [testCaseLib, setTestCaseLib] = useState<TestCaseFile[]>(() => buildMockTestCases())
+  const [libOpen, setLibOpen] = useState(false)
 
   // 分页：测评历史
   const HISTORY_PAGE_SIZE = 3
@@ -202,8 +246,53 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
       setPhase("idle")
       setCases([])
       setProgress(0)
+      // 将上传的文件加入测试用例库（按文件名去重，更新已有项）
+      setTestCaseLib((prev) => {
+        const others = prev.filter((t) => t.name !== file.name)
+        return [
+          {
+            id: `tc_${Date.now()}`,
+            name: file.name,
+            size: file.size,
+            caseCount: 0,
+            uploadedAt: new Date().toISOString(),
+          },
+          ...others,
+        ]
+      })
     }
     e.target.value = ""
+  }
+
+  // 从测试用例库选用一个文件
+  const handleSelectFromLib = (tc: TestCaseFile) => {
+    setFileName(tc.name)
+    setFileSize(tc.size)
+    setPhase("idle")
+    setCases([])
+    setProgress(0)
+    setLibOpen(false)
+  }
+
+  // 从测试用例库删除一个文件
+  const handleDeleteFromLib = (id: string) => {
+    setTestCaseLib((prev) => {
+      const target = prev.find((t) => t.id === id)
+      // 若删除的是当前已选用的文件，则清空当前选择
+      if (target && target.name === fileName) {
+        setFileName(null)
+        setFileSize(0)
+        setPhase("idle")
+        setCases([])
+        setProgress(0)
+      }
+      return prev.filter((t) => t.id !== id)
+    })
+  }
+
+  // 删除一条测评历史
+  const handleDeleteHistory = (id: string) => {
+    setHistory((prev) => prev.filter((h) => h.id !== id))
   }
 
   // 模拟运行评估
@@ -382,10 +471,16 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
                 className="hidden"
                 onChange={handleFileChange}
               />
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="size-4" />
-                {fileName ? "重新上传" : "上传用例"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="size-4" />
+                  {fileName ? "重新上传" : "上传用例"}
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLibOpen(true)}>
+                  <FolderOpen className="size-4" />
+                  测试用例库
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -437,12 +532,11 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
           )}
         </section>
 
-        {/* 步骤���：逐条评估结果 */}
-        {/* 测评版本历史（右列展示） */}
+        {/* 测评历史（右列展示） */}
         <section className="flex flex-col rounded-xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-5 flex items-center gap-2">
             <History className="size-5 text-primary" />
-            <h2 className="text-base font-semibold text-foreground">测评版本历史</h2>
+            <h2 className="text-base font-semibold text-foreground">测评历史</h2>
             <span className="text-sm text-muted-foreground">（{history.length} 次）</span>
           </div>
 
@@ -461,7 +555,16 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
                         <GitBranch className="size-3" />
                         {h.version}
                       </Badge>
-                      <span className="text-lg font-semibold text-foreground">{h.score}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold text-foreground">{h.score}</span>
+                        <button
+                          onClick={() => handleDeleteHistory(h.id)}
+                          className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`删除 ${h.version} 的测评记录`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                       <span className="truncate">{h.model}</span>
@@ -563,6 +666,77 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
           </section>
         )}
       </div>
+
+      {/* 测试用例库模态框 */}
+      <Dialog open={libOpen} onOpenChange={setLibOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="size-5 text-primary" />
+              测试用例库
+            </DialogTitle>
+            <DialogDescription>选择已上传的测试用例用于本次评估，或删除不再需要的用例集。</DialogDescription>
+          </DialogHeader>
+
+          {testCaseLib.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <FolderOpen className="size-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">用例库为空，请先上传测试用例文件。</p>
+            </div>
+          ) : (
+            <div className="max-h-96 space-y-2 overflow-y-auto">
+              {testCaseLib.map((tc) => {
+                const active = tc.name === fileName
+                return (
+                  <div
+                    key={tc.id}
+                    className={
+                      "flex items-center gap-3 rounded-lg border p-3 " +
+                      (active ? "border-primary bg-accent" : "border-border")
+                    }
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
+                      <FileSpreadsheet className="size-4.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground" title={tc.name}>
+                        {tc.name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatFileSize(tc.size)}
+                        {tc.caseCount > 0 ? ` · ${tc.caseCount} 条用例` : ""} · {formatDateTime(tc.uploadedAt)}
+                      </p>
+                    </div>
+                    {active ? (
+                      <Badge variant="outline" className="shrink-0 gap-1 border-primary/30 text-primary">
+                        <Check className="size-3" />
+                        已选用
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 gap-1"
+                        onClick={() => handleSelectFromLib(tc)}
+                      >
+                        <Check className="size-3.5" />
+                        使用
+                      </Button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteFromLib(tc.id)}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={`删除 ${tc.name}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
