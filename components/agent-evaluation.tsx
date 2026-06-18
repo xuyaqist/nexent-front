@@ -8,9 +8,6 @@ import {
   Upload,
   Play,
   FileSpreadsheet,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   Loader2,
   RotateCcw,
   TrendingUp,
@@ -56,6 +53,8 @@ interface EvalHistory {
   score: number
   passRate: number
   caseCount: number
+  fileName: string
+  fileSize: number
   evaluatedAt: string
 }
 
@@ -88,9 +87,9 @@ function buildVersionOptions(agent: Agent): string[] {
 function buildMockHistory(agent: Agent): EvalHistory[] {
   const versions = buildVersionOptions(agent)
   const base = [
-    { daysAgo: 3, model: "gpt-5-mini", score: 88, passRate: 83 },
-    { daysAgo: 9, model: "kimi-k2.5", score: 79, passRate: 67 },
-    { daysAgo: 18, model: "claude-opus-4.6", score: 72, passRate: 50 },
+    { daysAgo: 3, model: "gpt-5-mini", score: 88, passRate: 83, fileName: "销售场景测试集_v3.xlsx", fileSize: 24576 },
+    { daysAgo: 9, model: "kimi-k2.5", score: 79, passRate: 67, fileName: "回归测试集.csv", fileSize: 12800 },
+    { daysAgo: 18, model: "claude-opus-4.6", score: 72, passRate: 50, fileName: "冒烟测试集.csv", fileSize: 8192 },
   ]
   return base.slice(0, Math.max(versions.length, 1)).map((b, i) => {
     const d = new Date()
@@ -102,6 +101,8 @@ function buildMockHistory(agent: Agent): EvalHistory[] {
       score: b.score,
       passRate: b.passRate,
       caseCount: 6,
+      fileName: b.fileName,
+      fileSize: b.fileSize,
       evaluatedAt: d.toISOString(),
     }
   })
@@ -111,6 +112,13 @@ function formatDateTime(iso: string): string {
   const d = new Date(iso)
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// 格式化文件大小
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 // 模拟生成的测试用例（用户上传后展示）
@@ -145,36 +153,16 @@ function buildMockCases(): EvalCase[] {
   })
 }
 
-const STATUS_META: Record<
-  EvalCase["status"],
-  { label: string; icon: typeof CheckCircle2; className: string; badge: string }
-> = {
-  pass: {
-    label: "通过",
-    icon: CheckCircle2,
-    className: "text-emerald-600",
-    badge: "bg-emerald-50 text-emerald-600 border-emerald-200",
-  },
-  partial: {
-    label: "部分通过",
-    icon: AlertCircle,
-    className: "text-amber-600",
-    badge: "bg-amber-50 text-amber-600 border-amber-200",
-  },
-  fail: {
-    label: "未通过",
-    icon: XCircle,
-    className: "text-destructive",
-    badge: "bg-red-50 text-destructive border-red-200",
-  },
-}
-
 export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [fileSize, setFileSize] = useState<number>(0)
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle")
   const [progress, setProgress] = useState(0)
   const [cases, setCases] = useState<EvalCase[]>([])
+  // 评估过程中：用例总数与已测试数
+  const [totalCases, setTotalCases] = useState(0)
+  const [testedCount, setTestedCount] = useState(0)
 
   // 测评配置：模型与智能体版本
   const versionOptions = buildVersionOptions(agent)
@@ -184,10 +172,8 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   // 测评版本历史
   const [history, setHistory] = useState<EvalHistory[]>(() => buildMockHistory(agent))
 
-  // 分页：测试用例结果 & 测评历史
-  const CASE_PAGE_SIZE = 5
+  // 分页：测评历史
   const HISTORY_PAGE_SIZE = 5
-  const [casePage, setCasePage] = useState(1)
   const [historyPage, setHistoryPage] = useState(1)
 
   // 下载 CSV 模板（Excel 可直接打开）
@@ -212,6 +198,7 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
     const file = e.target.files?.[0]
     if (file) {
       setFileName(file.name)
+      setFileSize(file.size)
       setPhase("idle")
       setCases([])
       setProgress(0)
@@ -224,13 +211,15 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
     setPhase("running")
     setProgress(0)
     setCases([])
-    setCasePage(1)
     const total = MOCK_INPUTS.length
+    setTotalCases(total)
+    setTestedCount(0)
     const all = buildMockCases()
     let i = 0
     const timer = setInterval(() => {
       i += 1
       setCases(all.slice(0, i))
+      setTestedCount(i)
       setProgress(Math.round((i / total) * 100))
       if (i >= total) {
         clearInterval(timer)
@@ -247,6 +236,8 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
             score: avg,
             passRate: rate,
             caseCount: all.length,
+            fileName: fileName ?? "未命名测试集",
+            fileSize: fileSize,
             evaluatedAt: new Date().toISOString(),
           },
           ...prev,
@@ -266,10 +257,6 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
   const passRate = total ? Math.round((passCount / total) * 100) : 0
 
   // 分页切片（页码越界时自动收敛到末页）
-  const caseTotalPages = Math.max(1, Math.ceil(cases.length / CASE_PAGE_SIZE))
-  const safeCasePage = Math.min(casePage, caseTotalPages)
-  const pagedCases = cases.slice((safeCasePage - 1) * CASE_PAGE_SIZE, safeCasePage * CASE_PAGE_SIZE)
-
   const historyTotalPages = Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE))
   const safeHistoryPage = Math.min(historyPage, historyTotalPages)
   const pagedHistory = history.slice(
@@ -434,7 +421,10 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
           {phase === "running" && (
             <div className="mt-4">
               <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                <span>正在执行测试用例…</span>
+                <span>
+                  正在执行测试用例… 已测试 <span className="font-medium text-foreground">{testedCount}</span> / {totalCases} 个，剩余{" "}
+                  <span className="font-medium text-foreground">{Math.max(totalCases - testedCount, 0)}</span> 个
+                </span>
                 <span>{progress}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-secondary">
@@ -481,6 +471,13 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
                       <span>{formatDateTime(h.evaluatedAt)}</span>
                       <span className="shrink-0">{h.caseCount} 条</span>
                     </div>
+                    <div className="mt-2 flex items-center gap-1.5 border-t border-border pt-2 text-xs text-muted-foreground">
+                      <FileSpreadsheet className="size-3.5 shrink-0 text-primary" />
+                      <span className="truncate" title={h.fileName}>
+                        {h.fileName}
+                      </span>
+                      <span className="ml-auto shrink-0">{formatFileSize(h.fileSize)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -495,75 +492,12 @@ export function AgentEvaluation({ agent, onBack }: AgentEvaluationProps) {
         </section>
         </div>
 
-        {/* 步骤二：逐条评估结果 */}
-        {cases.length > 0 && (
-          <section className="rounded-xl border border-border bg-card p-6">
-            <div className="mb-5 flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                2
-              </span>
-              <h2 className="text-base font-semibold text-foreground">测试用例评估结果</h2>
-              <span className="text-sm text-muted-foreground">（{cases.length} 条）</span>
-            </div>
-
-            <div className="space-y-3">
-              {pagedCases.map((c) => {
-                const meta = STATUS_META[c.status]
-                const Icon = meta.icon
-                return (
-                  <div key={c.id} className="rounded-lg border border-border p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-primary">
-                          {c.id}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">{c.input}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{c.reason}</p>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-sm font-semibold text-foreground">{c.score}</span>
-                        <Badge variant="outline" className={"gap-1 " + meta.badge}>
-                          <Icon className="size-3" />
-                          {meta.label}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid gap-3 border-t border-border pt-3 text-xs sm:grid-cols-3">
-                      <div>
-                        <span className="text-muted-foreground">预期输出</span>
-                        <p className="mt-0.5 text-foreground">{c.expected}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">实际输出</span>
-                        <p className="mt-0.5 text-foreground">{c.actual}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">响应耗时</span>
-                        <p className="mt-0.5 text-foreground">{(c.latencyMs / 1000).toFixed(1)}s</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <Pagination
-              page={safeCasePage}
-              totalPages={caseTotalPages}
-              onPrev={() => setCasePage((p) => Math.max(1, p - 1))}
-              onNext={() => setCasePage((p) => Math.min(caseTotalPages, p + 1))}
-            />
-          </section>
-        )}
-
-        {/* 步骤三：评估报告 */}
+        {/* 步骤二：评估报告 */}
         {phase === "done" && (
           <section className="rounded-xl border border-border bg-card p-6">
             <div className="mb-5 flex items-center gap-2">
               <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                3
+                2
               </span>
               <h2 className="text-base font-semibold text-foreground">评估报告</h2>
             </div>
