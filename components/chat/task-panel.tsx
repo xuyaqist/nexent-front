@@ -220,16 +220,7 @@ export function TaskPanel({
           )}
         </div>
 
-        {/* bottom: context display */}
-        <div className="shrink-0 border-t border-border">
-          <div className="flex items-center gap-2 px-4 pb-2 pt-3">
-            <Zap className="size-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">Token 使用</span>
-          </div>
-          <div className="px-4 pb-4">
-            <TokenUsageDisplay usage={tokenUsage} />
-          </div>
-        </div>
+
       </div>
     </aside>
   )

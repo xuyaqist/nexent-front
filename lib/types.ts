@@ -6,6 +6,15 @@ export interface Skill {
   description: string
 }
 
+/** An MCP (Model Context Protocol) tool that can be invoked inline via @ */
+export interface McpTool {
+  id: string
+  name: string
+  description: string
+  /** the MCP server this tool belongs to */
+  server: string
+}
+
 export interface Agent {
   id: AgentId
   name: string
@@ -23,6 +32,22 @@ export interface TokenUsage {
   prompt: number
   completion: number
   total: number
+}
+
+/** A cited information source backing part of an answer. */
+export interface Source {
+  /** citation index referenced inline as [n] */
+  id: number
+  /** retrieval channel: web search vs knowledge base */
+  type: "web" | "knowledge"
+  /** display title of the source */
+  title: string
+  /** short excerpt / snippet supporting the citation */
+  snippet?: string
+  /** url for web sources */
+  url?: string
+  /** knowledge base / collection name for knowledge sources */
+  collection?: string
 }
 
 export interface PlanStep {
@@ -100,6 +125,8 @@ export interface Conversation {
   updatedAt: number
   /** suggested follow-up questions for the next turn */
   suggestions?: string[]
+  /** cited sources backing the latest answer (referenced inline as [n]) */
+  sources?: Source[]
   /** strategic plan shown in the right-side task panel (not inline) */
   plan?: PlanPart
   /** assistant-ui style context display items for the current/last turn */
