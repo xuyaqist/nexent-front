@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { ArrowLeft } from "lucide-react"
+import { toast } from "sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
@@ -105,6 +106,7 @@ export default function Page() {
           onToggle={() => setCollapsed((c) => !c)}
           onSelect={selectConversation}
           onNew={newConversation}
+          onSwitchLegacy={() => toast("正在切换到旧版界面...", { description: "旧版入口尚未接入，此处为占位提示" })}
         />
 
         <main className="flex min-w-0 flex-1 flex-col">
